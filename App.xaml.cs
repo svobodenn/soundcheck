@@ -31,12 +31,12 @@ public partial class App : Application
         }
         StartWakeListener();
 
-        base.OnStartup(e);
+        // IMPORTANT: set up resources and exception handlers BEFORE base.OnStartup,
+        // because that's what creates the StartupUri window — the MainWindow ctor
+        // already needs the Accent/AccentDim brushes (e.g. UpdateSortLabel).
         try { Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!); } catch { }
         Resources["Accent"]    = new SolidColorBrush(Color.FromRgb(0xC8, 0xA9, 0x6E));
         Resources["AccentDim"] = new SolidColorBrush(Color.FromRgb(0x6B, 0x5A, 0x38));
-
-        SoundCheck.Services.Log.Info("App started");
 
         // Catch any unhandled UI exception and log to file + show message
         DispatcherUnhandledException += (s, ex) =>
@@ -51,6 +51,9 @@ public partial class App : Application
             SoundCheck.Services.Log.Error("Unhandled domain exception: " + (ex.ExceptionObject as Exception)?.Message);
             try { File.AppendAllText(LogPath, $"[Domain] {DateTime.Now:O}\n{ex.ExceptionObject}\n\n"); } catch { }
         };
+
+        SoundCheck.Services.Log.Info("App started");
+        base.OnStartup(e);
     }
 
     /// <summary>Background listener: when a second launch signals the wake handle,

@@ -47,6 +47,7 @@ public partial class MainWindow
         // BeginAnimation set up at the call site handles the fade; here we just hide.
         Hide();
         ShowInTaskbar = false;
+        PauseAmbient(); // nothing is visible in the tray — stop burning CPU on animations
     }
 
     private void ShowFromTray()
@@ -60,6 +61,7 @@ public partial class MainWindow
         Activate();
         Topmost = true; Topmost = false; // bring to foreground
         Focus();
+        ResumeAmbient(); // restore animations now that the window is visible again
     }
 
     private void QuitApplication()

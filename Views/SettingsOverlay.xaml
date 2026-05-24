@@ -158,17 +158,17 @@
         <!-- Accent color dropdown item: colored dot + name, check on selected -->
         <Style x:Key="AccentComboItem" TargetType="ComboBoxItem">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{StaticResource T1}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,9" Margin="4,1">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="10,6" Margin="4,1">
                             <Grid>
                                 <ContentPresenter VerticalAlignment="Center"/>
-                                <Path x:Name="chk" Data="M2,7 L6,11 L13,3" Stroke="{StaticResource T1}" StrokeThickness="1.8"
+                                <Path x:Name="chk" Data="M2,7 L6,11 L13,3" Stroke="{DynamicResource Accent}" StrokeThickness="1.8"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
-                                      Width="15" Height="12" Stretch="Uniform" HorizontalAlignment="Right" Visibility="Collapsed"/>
+                                      Width="13" Height="11" Stretch="Uniform" HorizontalAlignment="Right" Visibility="Collapsed"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -233,7 +233,9 @@
                                     <Border.Effect>
                                         <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="4" Opacity="0.5"/>
                                     </Border.Effect>
-                                    <ItemsPresenter/>
+                                    <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
                                 </Border>
                             </Popup>
                         </Grid>
@@ -494,21 +496,8 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Delete database file -->
-                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,12">
-                                    <StackPanel>
-                                        <Grid>
-                                            <TextBlock Text="{DynamicResource L_DeleteDb}" Foreground="{StaticResource T1}" FontSize="15" VerticalAlignment="Center"/>
-                                            <Button Content="{DynamicResource L_DeleteDbBtn}" Click="BtnDeleteDb_Click"
-                                                    Style="{StaticResource DangerOutlineButton}"
-                                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                        </Grid>
-                                        <TextBlock Text="{DynamicResource L_DeleteDbDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,6,0,0" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Border>
-
                                 <!-- Diagnostics: logs -->
-                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,12,0,0">
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,12">
                                     <Grid>
                                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" MaxWidth="470">
                                             <TextBlock Text="{DynamicResource L_LogsTitle}" Foreground="{StaticResource T1}" FontSize="15"/>
@@ -518,6 +507,19 @@
                                                 Style="{StaticResource OutlineButton}"
                                                 HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                     </Grid>
+                                </Border>
+
+                                <!-- Delete database file -->
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,0">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="{DynamicResource L_DeleteDb}" Foreground="{StaticResource T1}" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Content="{DynamicResource L_DeleteDbBtn}" Click="BtnDeleteDb_Click"
+                                                    Style="{StaticResource DangerOutlineButton}"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <TextBlock Text="{DynamicResource L_DeleteDbDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
                                 </Border>
 
                             </StackPanel>

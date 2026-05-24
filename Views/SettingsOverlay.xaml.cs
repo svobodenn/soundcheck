@@ -43,15 +43,26 @@ public partial class SettingsOverlay : UserControl
 
     private readonly List<AccentOption> _accentOptions = new()
     {
-        new("Gold",   "#C8A96E"),
-        new("Red",    "#E05555"),
-        new("Rose",   "#E06AA8"),
-        new("Orange", "#E0883B"),
-        new("Yellow", "#E0C84F"),
-        new("Green",  "#5FB87A"),
-        new("Teal",   "#4FB3B0"),
-        new("Sky",    "#5B8DEF"),
-        new("Violet", "#9B6DE0"),
+        new("Gold",     "#C8A96E"),
+        new("Red",      "#E05555"),
+        new("Crimson",  "#E5446D"),
+        new("Rose",     "#E06AA8"),
+        new("Pink",     "#EA86B6"),
+        new("Magenta",  "#CF5BC0"),
+        new("Violet",   "#9B6DE0"),
+        new("Indigo",   "#7E5FE0"),
+        new("Blue",     "#5570E8"),
+        new("Sky",      "#5B8DEF"),
+        new("Cyan",     "#45C2D4"),
+        new("Teal",     "#4FB3B0"),
+        new("Mint",     "#4FC98A"),
+        new("Green",    "#5FB87A"),
+        new("Lime",     "#9FCF4F"),
+        new("Yellow",   "#E0C84F"),
+        new("Amber",    "#E0A83C"),
+        new("Orange",   "#E0883B"),
+        new("Coral",    "#E07A55"),
+        new("Slate",    "#8A93A0"),
     };
 
     public SettingsOverlay()

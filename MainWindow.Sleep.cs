@@ -18,10 +18,23 @@ public partial class MainWindow
         // Open the attached ContextMenu manually on left-click
         if (sender is Button b && b.ContextMenu != null)
         {
+            // Sync the custom-time label to the current slider + active language.
+            if (TxtSleepCustomLabel != null && SldSleepCustom != null)
+                TxtSleepCustomLabel.Text = FormatSleepDuration((int)Math.Round(SldSleepCustom.Value));
             b.ContextMenu.PlacementTarget = b;
             b.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
             b.ContextMenu.IsOpen = true;
         }
+    }
+
+    /// <summary>Localized "N min" / "N h" / "N h M min" label for a duration in minutes.</summary>
+    private static string FormatSleepDuration(int mins)
+    {
+        bool en = Localization.Current == Localization.En;
+        string mU = en ? "min" : "мин";
+        string hU = en ? "h" : "ч";
+        if (mins < 60) return $"{mins} {mU}";
+        return mins % 60 == 0 ? $"{mins / 60} {hU}" : $"{mins / 60} {hU} {mins % 60} {mU}";
     }
     private void SleepMenu_Click(object sender, RoutedEventArgs e)
     {
@@ -64,11 +77,7 @@ public partial class MainWindow
         _sleepTimer.Start();
         BtnSleep.SetResourceReference(ForegroundProperty, "Accent");
         BtnSleep.Opacity = 1.0;
-        bool _en = Localization.Current == Localization.En;
-        string mUnit = _en ? "min" : "мин";
-        string hUnit = _en ? "h" : "ч";
-        string label = minutes < 60 ? $"{minutes} {mUnit}" : (minutes % 60 == 0 ? $"{minutes/60} {hUnit}" : $"{minutes/60} {hUnit} {minutes%60} {mUnit}");
-        ToastView.Show(string.Format(Localization.T("ToastSleepSetFmt"), label));
+        ToastView.Show(string.Format(Localization.T("ToastSleepSetFmt"), FormatSleepDuration(minutes)));
     }
 
     // ─── Custom-minutes slider in sleep-menu ──────────────────────────────
@@ -77,15 +86,7 @@ public partial class MainWindow
     private void SldSleepCustom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (TxtSleepCustomLabel == null) return;
-        int mins = (int)Math.Round(e.NewValue);
-        bool en = Localization.Current == Localization.En;
-        string mU = en ? "min" : "мин";
-        string hU = en ? "h" : "ч";
-        TxtSleepCustomLabel.Text = mins < 60
-            ? $"{mins} {mU}"
-            : mins % 60 == 0
-                ? $"{mins / 60} {hU}"
-                : $"{mins / 60} {hU} {mins % 60} {mU}";
+        TxtSleepCustomLabel.Text = FormatSleepDuration((int)Math.Round(e.NewValue));
     }
 
     private void SldSleepCustom_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)

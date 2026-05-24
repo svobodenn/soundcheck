@@ -77,9 +77,9 @@ public static class Localization
         ["Sleep45"]            = ("45 минут",                                                    "45 minutes"),
         ["Sleep1h"]            = ("1 час",                                                       "1 hour"),
         ["Sleep2h"]            = ("2 часа",                                                      "2 hours"),
-        ["SleepCustom"]        = ("✎  Своё время",                                               "✎  Custom"),
+        ["SleepCustom"]        = ("Своё время",                                                   "Custom"),
         ["SleepCustomHint"]    = ("1—180 минут · отпусти — запустить",                            "1–180 minutes · release to start"),
-        ["SleepCancel"]        = ("✕  Отменить таймер",                                          "✕  Cancel timer"),
+        ["SleepCancel"]        = ("Отменить таймер",                                              "Cancel timer"),
 
         // ── Tray menu ───────────────────────────────────────────────────────
         ["TrayNothing"]        = ("ничего не играет",                                            "nothing playing"),

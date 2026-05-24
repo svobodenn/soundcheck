@@ -45,17 +45,25 @@ public partial class MainWindow
                 if (_navHistory.Count > 50) _navHistory.RemoveAt(0);
             }
             _isPrevNav = false;
+            // Immediate, cheap UI feedback so the switch feels instant.
             UpdateBarMeta();
             UpdatePlayButton();
-            ApplyAccentFromCover(t.CoverBytes);
-            UpdateBlurBg(t.CoverBytes);
             AnimateBarGlow();
             StartLogoPulse();
             PulseArtBorder();
             PulseCurrentRow();
-            ScrollToCurrent();
             if (NowPlayingOverlay.Visibility == Visibility.Visible) UpdateNowPlaying();
             Log.Info($"Playing: {t.Artist} — {t.Title}");
+
+            // Defer the heavy cover work (color extraction, blur decode, list layout)
+            // to the next idle frame so clicking a track doesn't stutter.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_current != t) return; // user already switched again
+                ApplyAccentFromCover(t.CoverBytes);
+                UpdateBlurBg(t.CoverBytes);
+                ScrollToCurrent();
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
         catch (Exception ex)
         {

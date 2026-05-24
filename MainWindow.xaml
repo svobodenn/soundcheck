@@ -224,8 +224,8 @@
                             <TextBlock Text="{DynamicResource L_Playlists}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <!-- Import .m3u playlist -->
-                            <Button x:Name="BtnImportPlaylist" Click="BtnImportPlaylist_Click" Cursor="Hand" Width="26" Height="24" Margin="0,0,6,0" ToolTip="{DynamicResource L_PlaylistImport}" Foreground="{StaticResource T2}">
+                            <!-- Import .m3u (outline) -->
+                            <Button x:Name="BtnImportPlaylist" Click="BtnImportPlaylist_Click" Cursor="Hand" Width="26" Height="26" Margin="0,0,6,0" ToolTip="{DynamicResource L_PlaylistImport}" Foreground="{StaticResource T2}">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
                                         <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6">
@@ -240,18 +240,16 @@
                                     </ControlTemplate>
                                 </Button.Template>
                             </Button>
-                            <Button x:Name="BtnNewPlaylist" Click="BtnNewPlaylist_Click" Cursor="Hand" VerticalAlignment="Center" ToolTip="{DynamicResource L_NewPlaylist}" Foreground="{DynamicResource Accent}">
+                            <!-- New playlist (accent-filled) -->
+                            <Button x:Name="BtnNewPlaylist" Click="BtnNewPlaylist_Click" Cursor="Hand" Width="26" Height="26" ToolTip="{DynamicResource L_NewPlaylist}">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bd" Background="#1FC8A96E" BorderBrush="{DynamicResource AccentDim}" BorderThickness="1" CornerRadius="6" Padding="8,4">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Path Data="M9,3 L9,15 M3,9 L15,9" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{DynamicResource L_NewPlaylistShort}" Foreground="{TemplateBinding Foreground}" FontSize="10" FontWeight="Bold" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                        <Border x:Name="bd" Background="{DynamicResource Accent}" CornerRadius="6">
+                                            <Path Data="M9,3 L9,15 M3,9 L15,9" Stroke="#FF0E0E0E" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#33C8A96E"/>
+                                                <Setter TargetName="bd" Property="Opacity" Value="0.85"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -1212,34 +1210,53 @@
                                   Fill="Transparent" Width="16" Height="16" Stretch="Uniform"/>
                             <Button.ContextMenu>
                                 <ContextMenu x:Name="SleepMenu">
-                                    <MenuItem Header="{DynamicResource L_Sleep15}" Tag="15"  Click="SleepMenu_Click"/>
-                                    <MenuItem Header="{DynamicResource L_Sleep30}" Tag="30"  Click="SleepMenu_Click"/>
-                                    <MenuItem Header="{DynamicResource L_Sleep45}" Tag="45"  Click="SleepMenu_Click"/>
-                                    <MenuItem Header="{DynamicResource L_Sleep1h}" Tag="60"  Click="SleepMenu_Click"/>
-                                    <MenuItem Header="{DynamicResource L_Sleep2h}" Tag="120" Click="SleepMenu_Click"/>
+                                    <MenuItem Header="{DynamicResource L_Sleep15}" Tag="15"  Click="SleepMenu_Click">
+                                        <MenuItem.Icon><Path Data="{StaticResource ClockGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{DynamicResource L_Sleep30}" Tag="30"  Click="SleepMenu_Click">
+                                        <MenuItem.Icon><Path Data="{StaticResource ClockGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{DynamicResource L_Sleep45}" Tag="45"  Click="SleepMenu_Click">
+                                        <MenuItem.Icon><Path Data="{StaticResource ClockGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{DynamicResource L_Sleep1h}" Tag="60"  Click="SleepMenu_Click">
+                                        <MenuItem.Icon><Path Data="{StaticResource ClockGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{DynamicResource L_Sleep2h}" Tag="120" Click="SleepMenu_Click">
+                                        <MenuItem.Icon><Path Data="{StaticResource ClockGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/></MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator/>
+                                    <!-- Custom time — compact card with a live value -->
                                     <MenuItem StaysOpenOnClick="True" Focusable="False">
                                         <MenuItem.Header>
-                                            <StackPanel Width="240" Margin="2,4,2,4">
-                                                <Grid Margin="0,0,0,6">
-                                                    <TextBlock Text="{DynamicResource L_SleepCustom}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Left"/>
-                                                    <TextBlock x:Name="TxtSleepCustomLabel" Text="30"
-                                                               Foreground="{DynamicResource Accent}" FontSize="11" FontWeight="Bold"
-                                                               HorizontalAlignment="Right"/>
-                                                </Grid>
-                                                <Slider x:Name="SldSleepCustom"
-                                                        Style="{StaticResource ThinSlider}"
-                                                        Minimum="1" Maximum="180" Value="30"
-                                                        IsSnapToTickEnabled="True" TickFrequency="1"
-                                                        ValueChanged="SldSleepCustom_ValueChanged"
-                                                        Thumb.DragCompleted="SldSleepCustom_DragCompleted"
-                                                        PreviewMouseLeftButtonUp="SldSleepCustom_MouseUp"
-                                                        ToolTip="{DynamicResource L_SleepCustomHint}"/>
-                                            </StackPanel>
+                                            <Border Width="226" Margin="2,2" Padding="11,8" CornerRadius="7"
+                                                    BorderBrush="{StaticResource B1}" BorderThickness="1" Background="#0BC8A96E">
+                                                <StackPanel>
+                                                    <Grid Margin="0,0,0,7">
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                            <Path Data="{StaticResource ClockGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.6" Fill="Transparent" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                            <TextBlock Text="{DynamicResource L_SleepCustom}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <TextBlock x:Name="TxtSleepCustomLabel" Text="30 min"
+                                                                   Foreground="{DynamicResource Accent}" FontSize="13" FontWeight="Bold"
+                                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                    <Slider x:Name="SldSleepCustom"
+                                                            Style="{StaticResource ThinSlider}"
+                                                            Minimum="1" Maximum="180" Value="30"
+                                                            IsSnapToTickEnabled="True" TickFrequency="1"
+                                                            ValueChanged="SldSleepCustom_ValueChanged"
+                                                            Thumb.DragCompleted="SldSleepCustom_DragCompleted"
+                                                            PreviewMouseLeftButtonUp="SldSleepCustom_MouseUp"/>
+                                                    <TextBlock Text="{DynamicResource L_SleepCustomHint}" Foreground="{StaticResource T3}" FontSize="9" Margin="0,7,0,0" HorizontalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
                                         </MenuItem.Header>
                                     </MenuItem>
                                     <Separator/>
-                                    <MenuItem Header="{DynamicResource L_SleepCancel}" Tag="0" Click="SleepMenu_Click"/>
+                                    <MenuItem Header="{DynamicResource L_SleepCancel}" Tag="0" Click="SleepMenu_Click" Style="{StaticResource DangerMenuItem}">
+                                        <MenuItem.Icon><Path Data="M4,4 L14,14 M14,4 L4,14" Stroke="{StaticResource Danger}" StrokeThickness="1.6" StrokeStartLineCap="Round" Width="13" Height="13" Stretch="Uniform"/></MenuItem.Icon>
+                                    </MenuItem>
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>

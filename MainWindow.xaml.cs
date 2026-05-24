@@ -255,9 +255,32 @@ public partial class MainWindow : Window
 
         KeyDown += MainWindow_KeyDown;
 
+        // Pause ambient animations when the window is minimized (CPU saver).
+        StateChanged += (_, _) =>
+        {
+            if (WindowState == WindowState.Minimized) PauseAmbient();
+            else ResumeAmbient();
+        };
+
         // ── Tray icon (minimize-to-tray on close) ─────────────────────────
         Loaded += (_, _) => InitTray();
         Closing += MainWindow_Closing;
+    }
+
+    /// <summary>Stop decorative animations (particles, floating cover, logo pulse)
+    /// while the window is hidden/minimized — they're invisible and just burn CPU.</summary>
+    private void PauseAmbient()
+    {
+        _partTimer.Stop();
+        StopLogoPulse();
+    }
+
+    /// <summary>Restart the decorative animations honoring current settings + playback.</summary>
+    private void ResumeAmbient()
+    {
+        bool motion = !AppSettings.ReduceMotion;
+        if (AppSettings.ParticlesEnabled && motion && !_partTimer.IsEnabled) _partTimer.Start();
+        if (AppSettings.LogoEqualizerEnabled && motion && _audio.IsPlaying) StartLogoPulse();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -448,29 +471,37 @@ public partial class MainWindow : Window
         };
         BtnSort.ToolTip = Localization.T("SortBy") + ": " + BtnSort.Content;
         // Highlight the active option in the sort popup (the button no longer shows text).
+        // TryFindResource (not FindResource) so it never throws if called before the
+        // accent brushes are registered.
         if (SortItemsHost != null)
             foreach (var child in SortItemsHost.Children)
-                if (child is Button b)
-                    b.Foreground = (b.Tag as string) == _sortMode
-                        ? (Brush)FindResource("Accent")
-                        : (Brush)FindResource("T2");
+                if (child is Button b
+                    && TryFindResource((b.Tag as string) == _sortMode ? "Accent" : "T2") is Brush br)
+                    b.Foreground = br;
     }
 
     private void RefreshVisible()
     {
         _visible.Clear();
-        // Source: the whole library, or the active playlist's tracks (in playlist order).
-        IEnumerable<Track> src;
+        // Source collection: the whole library, or the active playlist (in playlist order).
+        IReadOnlyList<Track> collection;
         if (_currentPlaylistId is long pid)
         {
             var byPath = _allTracks.ToDictionary(t => t.Path, StringComparer.OrdinalIgnoreCase);
-            src = _storage.LoadPlaylistPaths(pid)
+            collection = _storage.LoadPlaylistPaths(pid)
                 .Where(p => byPath.ContainsKey(p))
                 .Select(p => byPath[p])
                 .ToList();
         }
-        else src = _allTracks;
+        else collection = _allTracks;
 
+        // Hero header reflects the CURRENT collection (playlist or library), not the
+        // search-filtered subset — count + total duration of what you're looking at.
+        long colDur = (long)collection.Sum(t => t.Duration.TotalSeconds);
+        TxtHeroTracksRun.Text = collection.Count.ToString();
+        TxtHeroTimeRun.Text = FmtTotal(colDur);
+
+        IEnumerable<Track> src = collection;
         if (!string.IsNullOrEmpty(_searchQ))
         {
             var q = _searchQ.ToLowerInvariant();
@@ -651,12 +682,10 @@ public partial class MainWindow : Window
     private void UpdateStats()
     {
         TxtTabAllCount.Text = _allTracks.Count.ToString();
-        long total = (long)_allTracks.Sum(t => t.Duration.TotalSeconds);
-        TxtHeroTracksRun.Text = _allTracks.Count.ToString();
-        TxtHeroTimeRun.Text = FmtTotal(total);
         UpdateHeroActions();
         RefreshRecent();
-        // Empty-state hint is managed by RefreshVisible (it knows search/playlist context).
+        // Hero count/duration + empty-state hint are managed by RefreshVisible
+        // (it knows the playlist/search context).
     }
 
     /// <summary>
