@@ -61,9 +61,9 @@ public partial class MainWindow
             FileManagerOverlay.Visibility = Visibility.Visible;
             if (!_fmInitialized)
             {
-                // Open at the common parent of ALL library tracks so sibling folders
-                // (e.g. "maybe baby" + "свободная нация") are both visible — not just
-                // the first track's own folder. Fall back to the Music folder.
+                // Open at the common parent of ALL library tracks so sibling album
+                // folders are all visible — not just the first track's own folder.
+                // Fall back to the Music folder.
                 string initial = LibraryCommonFolder()
                     ?? Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
                 FileManagerOverlay.OpenFolder(initial);
