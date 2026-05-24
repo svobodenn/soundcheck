@@ -1,0 +1,25 @@
+# Build output
+bin/
+obj/
+[Pp]ublish/
+*.binlog
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+# Local runtime data (the player stores its DB in %AppData%, but ignore stray copies)
+*.db
+*.db-shm
+*.db-wal
+crash.log
+app.log
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,173 @@
+<UserControl x:Class="SoundCheck.Views.HelpView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:SoundCheck.Helpers"
+             Background="#EB050505"
+             Opacity="0"
+             RenderTransformOrigin="0.5,0.5">
+    <UserControl.RenderTransform>
+        <ScaleTransform x:Name="HpScale" ScaleX="0.96" ScaleY="0.96"/>
+    </UserControl.RenderTransform>
+
+    <Grid x:Name="BackdropGrid" Background="Transparent" MouseLeftButtonDown="Backdrop_MouseDown">
+        <Border Width="640" MaxHeight="700"
+                Background="{StaticResource Sb}"
+                BorderBrush="{StaticResource B1}" BorderThickness="1"
+                CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MouseLeftButtonDown="Card_MouseDown">
+            <Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True">
+                    <StackPanel>
+                        <!-- HERO -->
+                        <Border Padding="38,38,38,32" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Border Background="{DynamicResource Accent}" Width="3" HorizontalAlignment="Left"/>
+                                <StackPanel Margin="20,0,0,0">
+                                    <TextBlock Text="{DynamicResource L_HelpHeader}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{DynamicResource L_HelpSubtitle}" Foreground="{StaticResource T1}" FontSize="24" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <Button x:Name="BtnClose" Style="{StaticResource PillButton}"
+                                        Content="{DynamicResource L_BtnCloseShort}"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Foreground="{StaticResource T3}"
+                                        Padding="14,7" FontSize="10" FontWeight="Bold"
+                                        Click="BtnClose_Click"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- KEYBOARD SHORTCUTS -->
+                        <Border Padding="38,22,38,22">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource L_HelpKeyboard}" Foreground="{StaticResource T3}" FontSize="11" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpPlayPause}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="Space" Foreground="{DynamicResource Accent}" FontSize="11" FontFamily="{StaticResource MonoFont}" FontWeight="Bold"/>
+                                    </Border>
+                                </Grid>
+
+                                <Rectangle Fill="{StaticResource B1}" Height="1" Margin="0,8" Opacity="0.4"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpPrevTrack}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="←" Foreground="{DynamicResource Accent}" FontSize="11" FontFamily="{StaticResource MonoFont}" FontWeight="Bold"/>
+                                    </Border>
+                                </Grid>
+
+                                <Rectangle Fill="{StaticResource B1}" Height="1" Margin="0,8" Opacity="0.4"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpNextTrack}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="→" Foreground="{DynamicResource Accent}" FontSize="11" FontFamily="{StaticResource MonoFont}" FontWeight="Bold"/>
+                                    </Border>
+                                </Grid>
+
+                                <Rectangle Fill="{StaticResource B1}" Height="1" Margin="0,8" Opacity="0.4"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpEscClose}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="Esc" Foreground="{DynamicResource Accent}" FontSize="11" FontFamily="{StaticResource MonoFont}" FontWeight="Bold"/>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Rectangle Fill="{StaticResource B1}" Height="1"/>
+
+                        <!-- MOUSE / GLOBAL -->
+                        <Border Padding="38,22,38,22">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource L_HelpMouse}" Foreground="{StaticResource T3}" FontSize="11" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpPlayTrack}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="{DynamicResource L_HelpClickRow}" Foreground="{StaticResource T2}" FontSize="11"/>
+                                    </Border>
+                                </Grid>
+
+                                <Rectangle Fill="{StaticResource B1}" Height="1" Margin="0,8" Opacity="0.4"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpContext}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="{DynamicResource L_HelpRightClick}" Foreground="{StaticResource T2}" FontSize="11"/>
+                                    </Border>
+                                </Grid>
+
+                                <Rectangle Fill="{StaticResource B1}" Height="1" Margin="0,8" Opacity="0.4"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpSortTracks}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="{DynamicResource L_HelpDragTrack}" Foreground="{StaticResource T2}" FontSize="11"/>
+                                    </Border>
+                                </Grid>
+
+                                <Rectangle Fill="{StaticResource B1}" Height="1" Margin="0,8" Opacity="0.4"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpOpenNp}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="{DynamicResource L_HelpClickCover}" Foreground="{StaticResource T2}" FontSize="11"/>
+                                    </Border>
+                                </Grid>
+
+                                <Rectangle Fill="{StaticResource B1}" Height="1" Margin="0,8" Opacity="0.4"/>
+
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource L_HelpAddFilesAction}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="5" Padding="11,5">
+                                        <TextBlock Text="{DynamicResource L_HelpDragIntoWindow}" Foreground="{StaticResource T2}" FontSize="11"/>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

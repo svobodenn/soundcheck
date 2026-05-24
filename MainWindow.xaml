@@ -1,0 +1,1264 @@
+<Window x:Class="SoundCheck.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:SoundCheck.Views"
+        xmlns:helpers="clr-namespace:SoundCheck.Helpers"
+        Title="soundcheck"
+        Icon="Assets/soundcheck.ico"
+        Width="1440" Height="900"
+        MinWidth="900" MinHeight="600"
+        Background="Transparent"
+        AllowsTransparency="True"
+        FontFamily="{StaticResource MonoFont}"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowDrop="True"
+        Drop="Window_Drop"
+        DragOver="Window_DragOver"
+        DragEnter="Window_DragEnter"
+        DragLeave="Window_DragLeave">
+
+    <!-- Custom window chrome: hide native title bar, keep resize borders + min/max/snap -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6"
+                      CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Border x:Name="WindowRoot" Background="{StaticResource Bg}" CornerRadius="10"
+            SizeChanged="WindowRoot_SizeChanged">
+    <Grid RenderTransformOrigin="0.5,1" Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="110"/>
+        </Grid.RowDefinitions>
+        <Grid.RenderTransform>
+            <TransformGroup>
+                <ScaleTransform x:Name="AppScale" ScaleX="1" ScaleY="1"/>
+                <TranslateTransform x:Name="AppEntranceTrans" Y="8"/>
+            </TransformGroup>
+        </Grid.RenderTransform>
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="AppEntranceTrans" Storyboard.TargetProperty="Y" From="8" To="0" Duration="0:0:0.65">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
+
+        <!-- Floating gradient layer (slowly drifts when playing) -->
+        <Canvas x:Name="FloatBgCanvas" Grid.RowSpan="2" Opacity="0" IsHitTestVisible="False" Panel.ZIndex="-2" ClipToBounds="True" RenderTransformOrigin="0.5,0.5">
+            <Canvas.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform x:Name="FloatBgScale" ScaleX="1" ScaleY="1"/>
+                    <TranslateTransform x:Name="FloatBgTrans" X="0" Y="0"/>
+                </TransformGroup>
+            </Canvas.RenderTransform>
+            <!-- 3 radial blobs (like body::before in HTML) -->
+            <Ellipse Width="500" Height="380" Canvas.Left="-80" Canvas.Top="-50">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#14C8A96E" Offset="0"/>
+                        <GradientStop Color="#00C8A96E" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Width="450" Height="340" Canvas.Right="-60" Canvas.Bottom="-40">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#106B5A38" Offset="0"/>
+                        <GradientStop Color="#006B5A38" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Width="400" Height="300" Canvas.Left="500" Canvas.Top="280">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#0DC8A96E" Offset="0"/>
+                        <GradientStop Color="#00C8A96E" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+        </Canvas>
+
+        <!-- Blurred BG layers A/B (crossfade like HTML #bgA / #bgB) -->
+        <Image x:Name="BlurBgImg" Grid.RowSpan="2" Stretch="UniformToFill" Opacity="0" Panel.ZIndex="-1">
+            <Image.Effect>
+                <BlurEffect Radius="80" KernelType="Gaussian"/>
+            </Image.Effect>
+        </Image>
+        <Image x:Name="BlurBgImg2" Grid.RowSpan="2" Stretch="UniformToFill" Opacity="0" Panel.ZIndex="-1">
+            <Image.Effect>
+                <BlurEffect Radius="80" KernelType="Gaussian"/>
+            </Image.Effect>
+        </Image>
+
+        <!-- Particles canvas (above bg, below content) -->
+        <Canvas x:Name="ParticlesCanvas" Grid.RowSpan="2" IsHitTestVisible="False" Opacity="0" Panel.ZIndex="0"/>
+
+        <!-- TOP: sidebar + main area -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ─── SIDEBAR ─── -->
+            <Border Grid.Column="0" Background="{StaticResource Sb}" BorderBrush="{StaticResource B1}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- LOGO -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,22,20,18">
+                        <!-- Live equalizer logo: 5 bars, each scales independently when audio is playing -->
+                        <StackPanel Orientation="Horizontal" Width="28" Height="26" VerticalAlignment="Center">
+                            <Rectangle x:Name="LogoBar1" Width="3" Height="22" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource Accent}" Margin="0,0,2,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Rectangle.RenderTransform><ScaleTransform x:Name="Logo1Scale" ScaleY="0.45"/></Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="LogoBar2" Width="3" Height="22" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource Accent}" Margin="0,0,2,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Rectangle.RenderTransform><ScaleTransform x:Name="Logo2Scale" ScaleY="0.85"/></Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="LogoBar3" Width="3" Height="22" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource Accent}" Margin="0,0,2,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Rectangle.RenderTransform><ScaleTransform x:Name="Logo3Scale" ScaleY="0.65"/></Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="LogoBar4" Width="3" Height="22" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource Accent}" Margin="0,0,2,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Rectangle.RenderTransform><ScaleTransform x:Name="Logo4Scale" ScaleY="0.95"/></Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="LogoBar5" Width="3" Height="22" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource Accent}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Rectangle.RenderTransform><ScaleTransform x:Name="Logo5Scale" ScaleY="0.40"/></Rectangle.RenderTransform>
+                            </Rectangle>
+                        </StackPanel>
+                        <!-- Letter-by-letter wave: each glyph fades to accent and back, staggered (animation set up in code) -->
+                        <StackPanel x:Name="LogoLetters" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                    </StackPanel>
+
+                    <Separator Grid.Row="1" Background="{StaticResource B1}" Height="1" Margin="0"/>
+
+                    <!-- ACTION LABEL -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="20,16,20,10">
+                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Accent}" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                        <TextBlock Text="{DynamicResource L_Actions}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- ACTION BUTTONS -->
+                    <StackPanel Grid.Row="3" VerticalAlignment="Top" Margin="14,0,14,0">
+                        <Button x:Name="BtnAdd" Style="{StaticResource SidebarButton}" Click="BtnAdd_Click" Foreground="{StaticResource T2}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="M12,5 L12,19 M5,12 L19,12" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                                <TextBlock Text="{DynamicResource L_Add}" Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Margin="11,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Popup x:Name="AddPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                               Placement="Bottom" PlacementTarget="{Binding ElementName=BtnAdd}">
+                            <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="5" Margin="0,4,0,0" MinWidth="190">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="4" Opacity="0.5"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <Button Click="AddFilesItem_Click" Cursor="Hand" Foreground="{StaticResource T2}" HorizontalContentAlignment="Stretch">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="11,9">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource FileGeo}" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6" Fill="Transparent" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{DynamicResource L_AddFiles}" Foreground="{TemplateBinding Foreground}" Margin="11,0,0,0" VerticalAlignment="Center" FontSize="12"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <Button Click="AddFolderItem_Click" Cursor="Hand" Foreground="{StaticResource T2}" HorizontalContentAlignment="Stretch">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="11,9">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource FolderGeo}" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6" Fill="Transparent" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{DynamicResource L_AddFolder}" Foreground="{TemplateBinding Foreground}" Margin="11,0,0,0" VerticalAlignment="Center" FontSize="12"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                        <Button x:Name="BtnClear" Style="{StaticResource SidebarDangerButton}" Click="BtnClear_Click" Foreground="{StaticResource T2}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource TrashGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                                <TextBlock Text="{DynamicResource L_ClearAll}" Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Margin="11,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- PLAYLISTS LABEL + NEW -->
+                    <Grid Grid.Row="4" Margin="20,18,16,6">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <Ellipse Width="3" Height="3" Fill="{DynamicResource Accent}" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                            <TextBlock Text="{DynamicResource L_Playlists}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <!-- Import .m3u playlist -->
+                            <Button x:Name="BtnImportPlaylist" Click="BtnImportPlaylist_Click" Cursor="Hand" Width="26" Height="24" Margin="0,0,6,0" ToolTip="{DynamicResource L_PlaylistImport}" Foreground="{StaticResource T2}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6">
+                                            <Path Data="M9,3 L9,12 M5,9 L9,13 L13,9 M3,15 L15,15" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="12" Height="12" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            <Button x:Name="BtnNewPlaylist" Click="BtnNewPlaylist_Click" Cursor="Hand" VerticalAlignment="Center" ToolTip="{DynamicResource L_NewPlaylist}" Foreground="{DynamicResource Accent}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="#1FC8A96E" BorderBrush="{DynamicResource AccentDim}" BorderThickness="1" CornerRadius="6" Padding="8,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="M9,3 L9,15 M3,9 L15,9" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{DynamicResource L_NewPlaylistShort}" Foreground="{TemplateBinding Foreground}" FontSize="10" FontWeight="Bold" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="#33C8A96E"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- PLAYLISTS LIST + RECENT share the * row -->
+                    <Grid Grid.Row="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Playlists -->
+                        <Grid Grid.Row="0" Margin="14,0,14,2">
+                            <ListBox x:Name="PlaylistList" Background="Transparent" BorderThickness="0" MaxHeight="148"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     SelectionChanged="PlaylistList_SelectionChanged"
+                                     MouseDoubleClick="PlaylistList_DoubleClick"
+                                     PreviewMouseLeftButtonDown="PlaylistList_PreviewMouseLeftButtonDown"
+                                     MouseMove="PlaylistList_MouseMove">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="AllowDrop" Value="True"/>
+                                        <EventSetter Event="DragOver" Handler="Playlist_DragOver"/>
+                                        <EventSetter Event="Drop" Handler="Playlist_Drop"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="8,6" Margin="0,1">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Background="Transparent">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="{DynamicResource L_CtxPlay}" Click="PlaylistPlay_Click">
+                                                        <MenuItem.Icon>
+                                                            <Path Data="M5,3 L14,8.5 L5,14 Z" Fill="{DynamicResource Accent}" Width="13" Height="13" Stretch="Uniform"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="{DynamicResource L_PlaylistShuffle}" Click="PlaylistShufflePlay_Click">
+                                                        <MenuItem.Icon>
+                                                            <Path Data="M3,4 L7,4 L13,14 L17,14 M14,11 L17,14 L14,17 M3,14 L7,14 L9,10.5 M11,7.5 L13,4 L17,4 M14,1 L17,4 L14,7" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="15" Height="15" Stretch="Uniform"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="{DynamicResource L_PlaylistMerge}" SubmenuOpened="PlaylistMerge_SubmenuOpened">
+                                                        <MenuItem.Icon>
+                                                            <Path Data="M4,3 L4,11 A4,4 0 0 0 8,15 L15,15 M12,12 L15,15 L12,18 M14,3 L14,8" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="15" Height="15" Stretch="Uniform"/>
+                                                        </MenuItem.Icon>
+                                                        <MenuItem Header=""/>
+                                                    </MenuItem>
+                                                    <MenuItem Header="{DynamicResource L_PlaylistExport}" Click="PlaylistExport_Click">
+                                                        <MenuItem.Icon>
+                                                            <Path Data="M9,12 L9,3 M5,7 L9,3 L13,7 M3,15 L15,15" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <MenuItem Header="{DynamicResource L_PlaylistRename}" Click="PlaylistRename_Click">
+                                                        <MenuItem.Icon>
+                                                            <Path Data="M4,14 L4,11 L13,2 L16,5 L7,14 Z M11,4 L14,7" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="{DynamicResource L_PlaylistDelete}" Click="PlaylistDelete_Click" Style="{StaticResource DangerMenuItem}">
+                                                        <MenuItem.Icon>
+                                                            <Path Data="M3,5 L15,5 M6,5 L6,3 L12,3 L12,5 M5,5 L5,15 L13,15 L13,5 M8,8 L8,12 M10,8 L10,12" Stroke="{StaticResource Danger}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="5" ClipToBounds="True" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                    Background="{StaticResource S3}" BorderBrush="{StaticResource B1}" BorderThickness="1">
+                                                <Grid>
+                                                    <Path Data="M3,5 L15,5 M3,9 L15,9 M3,13 L11,13" Stroke="{StaticResource T3}" StrokeThickness="1.4" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                                </Grid>
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{StaticResource T1}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Count}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Button x:Name="PlaylistEmpty" Click="BtnNewPlaylist_Click" Cursor="Hand" HorizontalAlignment="Left" Margin="6,2,0,4" Foreground="{StaticResource T3}" ToolTip="{DynamicResource L_NewPlaylist}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="9,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="M9,3 L9,15 M3,9 L15,9" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{DynamicResource L_CreatePlaylist}" Foreground="{TemplateBinding Foreground}" FontSize="11" Margin="7,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentDim}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
+
+                        <!-- RECENT LABEL -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="20,14,20,8">
+                            <Ellipse Width="3" Height="3" Fill="{DynamicResource Accent}" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                            <TextBlock Text="{DynamicResource L_Recent}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                    <!-- RECENT TRACKS LIST (fills the dead space between actions and stats) -->
+                    <Grid Grid.Row="2" Margin="14,0,14,12">
+                        <ListBox x:Name="RecentList" Background="Transparent" BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                 SelectionChanged="RecentList_SelectionChanged">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="6,5" Margin="0,1">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="30" Height="30" CornerRadius="4" ClipToBounds="True" Background="{StaticResource S3}" Margin="0,0,9,0">
+                                            <Grid>
+                                                <Path Data="{StaticResource LogoGeo}" Fill="{StaticResource T3}" Width="14" Height="14" Stretch="Uniform" Opacity="0.35"/>
+                                                <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource T1}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Artist}" Foreground="{StaticResource T3}" FontSize="10" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <!-- Placeholder when there's no history yet -->
+                        <StackPanel x:Name="RecentEmpty" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" Margin="0,12,0,0">
+                            <Path Data="{StaticResource ClockGeo}" Stroke="{StaticResource T2}" StrokeThickness="1.4" Fill="Transparent" Width="18" Height="18" Stretch="Uniform" Opacity="0.75" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource L_RecentEmpty}" Foreground="{StaticResource T2}" FontSize="10" Margin="0,8,0,0" HorizontalAlignment="Center" Opacity="0.9"/>
+                        </StackPanel>
+                    </Grid>
+                    </Grid>
+
+                </Grid>
+            </Border>
+
+            <!-- ─── MAIN AREA ─── -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- HERO — top padding reserves 38px strip for window chrome buttons -->
+                <Border Grid.Row="0" Padding="32,38,32,14" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1" ClipToBounds="True">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#08C8A96E" Offset="0"/>
+                            <GradientStop Color="#00C8A96E" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid>
+                        <!-- Radial gradient blob — wrapped in Canvas so its 380×380 size doesn't force hero height -->
+                        <Canvas IsHitTestVisible="False" ClipToBounds="False">
+                        <Ellipse Width="380" Height="380" Canvas.Right="-40" Canvas.Top="-140" IsHitTestVisible="False">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush GradientOrigin="0.5,0.5" Center="0.5,0.5">
+                                    <GradientStop Color="#12C8A96E" Offset="0"/>
+                                    <GradientStop Color="#00000000" Offset="0.7"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        </Canvas>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <!-- Playlist cover (only shown when viewing a playlist) -->
+                            <Border x:Name="PlaylistCoverHost" Width="104" Height="104" CornerRadius="12" ClipToBounds="True" Margin="0,0,20,0"
+                                    Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" Visibility="Collapsed">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="22" ShadowDepth="6" Opacity="0.45"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <Path Data="M3,5 L15,5 M3,9 L15,9 M3,13 L11,13" Stroke="{StaticResource T3}" StrokeThickness="1.4" Width="38" Height="38" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Image x:Name="PlaylistCoverImg" Stretch="UniformToFill"/>
+                                </Grid>
+                            </Border>
+                            <!-- Accent rail next to the title -->
+                            <Border Width="3" Height="54" CornerRadius="2" Margin="0,0,15,0" VerticalAlignment="Center"
+                                    Background="{DynamicResource Accent}"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Ellipse Width="4" Height="4" Fill="{DynamicResource Accent}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                    <TextBlock Text="{DynamicResource L_LibraryHeader}" Foreground="{DynamicResource Accent}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock x:Name="TxtCollectionName" Text="{DynamicResource L_MyCollection}" Foreground="{StaticResource T1}" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Foreground="{StaticResource T2}" FontSize="11">
+                                        <Run x:Name="TxtHeroTracksRun" Text="0" Foreground="{DynamicResource Accent}" FontWeight="Bold"/><Run Text="{DynamicResource L_TracksWord}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="  ·  " Foreground="{StaticResource T3}" FontSize="11"/>
+                                    <TextBlock Foreground="{StaticResource T2}" FontSize="11">
+                                        <Run x:Name="TxtHeroTimeRun" Text="0" Foreground="{DynamicResource Accent}" FontWeight="Bold"/><Run Text="{DynamicResource L_TotalDuration}"/>
+                                    </TextBlock>
+                                    <TextBlock x:Name="TxtHeroFoundSep" Text="  ·  " Foreground="{StaticResource T3}" FontSize="11" Visibility="Collapsed"/>
+                                    <TextBlock x:Name="TxtHeroFound" Foreground="{StaticResource T2}" FontSize="11" Visibility="Collapsed">
+                                        <Run Text="{DynamicResource L_FoundLabel}"/><Run x:Name="TxtHeroFoundRun" Text="0" Foreground="{DynamicResource Accent}" FontWeight="Bold"/>
+                                    </TextBlock>
+                                </StackPanel>
+                                <!-- Playlist actions (only when viewing a playlist) — compact icon buttons -->
+                                <StackPanel x:Name="PlaylistActions" Orientation="Horizontal" Margin="0,10,0,0" Visibility="Collapsed">
+                                    <Button x:Name="BtnPlaylistAddTracks" Click="BtnPlaylistAddTracks_Click" Cursor="Hand" Width="32" Height="32" Margin="0,0,8,0" ToolTip="{DynamicResource L_AddTracks}" Foreground="{DynamicResource Accent}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="bd" Background="#1FC8A96E" BorderBrush="{DynamicResource AccentDim}" BorderThickness="1" CornerRadius="8">
+                                                    <Path Data="M9,4 L9,14 M4,9 L14,9" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Background" Value="#33C8A96E"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <Button x:Name="BtnPlaylistCover" Click="BtnPlaylistCover_Click" Cursor="Hand" Width="32" Height="32" ToolTip="{DynamicResource L_PlaylistCover}" Foreground="{StaticResource T2}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8">
+                                                    <Path Data="M3,15 L7,9 L10,13 L13,8 L17,15 Z M6,5 A1.4,1.4 0 1 1 6,5.01" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <!-- Search -->
+                            <Border x:Name="SearchBorder" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="9" Height="40" Padding="14,0" Margin="0,0,10,0">
+                                <Border.Effect>
+                                    <DropShadowEffect x:Name="SearchGlow" Color="#C8A96E" BlurRadius="0" ShadowDepth="0" Opacity="0"/>
+                                </Border.Effect>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path x:Name="SearchIcon" Data="{StaticResource SearchGeo}" Stroke="{StaticResource T2}" StrokeThickness="2" Fill="Transparent" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"/>
+                                    <Grid Margin="10,0,0,0">
+                                        <TextBox x:Name="TxtSearch" Width="240" Background="Transparent" Foreground="{StaticResource T1}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" CaretBrush="{StaticResource T1}" TextChanged="TxtSearch_TextChanged" GotKeyboardFocus="TxtSearch_Focus" LostKeyboardFocus="TxtSearch_Blur"/>
+                                        <TextBlock x:Name="TxtSearchPh" Text="{DynamicResource L_SearchPlaceholder}" Foreground="{StaticResource T3}" FontSize="13" VerticalAlignment="Center" IsHitTestVisible="False" Margin="3,0,0,0"/>
+                                    </Grid>
+                                    <!-- Clear (✕) button: Hidden (not Collapsed) so it reserves layout space — search border doesn't resize when text appears -->
+                                    <Button x:Name="BtnSearchClear" Style="{StaticResource RowActionDangerButton}" Width="22" Height="22"
+                                            Click="BtnSearchClear_Click" ToolTip="{DynamicResource L_SearchClear}" Margin="6,0,0,0" Visibility="Hidden">
+                                        <TextBlock Text="✕" FontSize="11"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                            <!-- Profile pill -->
+                            <Button x:Name="BtnProfile" Style="{StaticResource PillButton}" Foreground="{StaticResource T2}" Click="BtnProfile_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource StatsGeo}" Fill="{DynamicResource Accent}" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource L_PillStats}" Margin="9,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <!-- File Manager: icon-only button (batch rename by tags) -->
+                            <Button x:Name="BtnFileMgr" Click="BtnFileMgr_Click" Cursor="Hand"
+                                    Width="36" Height="36" Margin="8,0,0,0" ToolTip="{DynamicResource L_FmTitle}"
+                                    Background="Transparent" BorderThickness="0">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="Transparent" CornerRadius="9">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <Path Data="{StaticResource FolderGeo}"
+                                      Stroke="{StaticResource T1}" StrokeThickness="1.7"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Fill="Transparent" Width="18" Height="18" Stretch="Uniform"/>
+                            </Button>
+                            <!-- Settings: icon-only button. Hover gives subtle bg highlight. -->
+                            <Button x:Name="BtnSettings" Click="BtnSettings_Click" Cursor="Hand"
+                                    Width="36" Height="36" Margin="8,0,0,0" ToolTip="{DynamicResource L_TooltipSettings}"
+                                    Background="Transparent" BorderThickness="0">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="Transparent" CornerRadius="9">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <Path Data="{StaticResource GearGeo}"
+                                      Stroke="{StaticResource T1}" StrokeThickness="1.7"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Fill="Transparent" Width="18" Height="18" Stretch="Uniform"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- FILTER TABS -->
+                <!-- Filter tabs row: HTML linear-gradient(180deg, rgba(15,15,15,.6), rgba(15,15,15,.85)) -->
+                <Border Grid.Row="1" Padding="32,8" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#990F0F0F" Offset="0"/>
+                            <GradientStop Color="#D90F0F0F" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button x:Name="BtnTabAll" Style="{StaticResource PillButton}" Foreground="{DynamicResource Accent}" Click="BtnTabAll_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{DynamicResource L_TabAll}" VerticalAlignment="Center"/>
+                                    <Border Background="{DynamicResource Accent}" CornerRadius="10" MinWidth="24" Height="18" Margin="10,0,0,0">
+                                        <TextBlock x:Name="TxtTabAllCount" Text="0" Foreground="{StaticResource Bg}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="6,0"/>
+                                    </Border>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Sort control (icon only) -->
+                            <Button x:Name="BtnSort" Cursor="Hand" Margin="8,0,0,0" Click="BtnSort_Click" Foreground="{StaticResource T2}" VerticalAlignment="Center" Width="32" Height="32" ToolTip="{DynamicResource L_SortBy}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8">
+                                            <Path Data="M3,5 L12,5 M3,9 L9,9 M3,13 L6,13" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S1}"/>
+                                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            <Popup x:Name="SortPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                                   Placement="Bottom" PlacementTarget="{Binding ElementName=BtnSort}">
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="5" Margin="0,4,0,0" MinWidth="170">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="4" Opacity="0.5"/>
+                                    </Border.Effect>
+                                    <StackPanel x:Name="SortItemsHost">
+                                        <Button Tag="added"    Click="SortItem_Click" Cursor="Hand" Foreground="{StaticResource T2}" HorizontalContentAlignment="Stretch" Style="{StaticResource SortMenuItem}" Content="{DynamicResource L_SortAdded}"/>
+                                        <Button Tag="title"    Click="SortItem_Click" Cursor="Hand" Foreground="{StaticResource T2}" HorizontalContentAlignment="Stretch" Style="{StaticResource SortMenuItem}" Content="{DynamicResource L_SortTitle}"/>
+                                        <Button Tag="artist"   Click="SortItem_Click" Cursor="Hand" Foreground="{StaticResource T2}" HorizontalContentAlignment="Stretch" Style="{StaticResource SortMenuItem}" Content="{DynamicResource L_SortArtist}"/>
+                                        <Button Tag="duration" Click="SortItem_Click" Cursor="Hand" Foreground="{StaticResource T2}" HorizontalContentAlignment="Stretch" Style="{StaticResource SortMenuItem}" Content="{DynamicResource L_SortDuration}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <!-- ? help button: round, accent on hover (matches HTML .gh-link:hover) -->
+                            <Button x:Name="BtnHelp" Cursor="Hand" Width="28" Height="28" Margin="0,0,4,0" ToolTip="{DynamicResource L_TooltipHelp}" Click="BtnHelp_Click">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="Transparent" CornerRadius="14">
+                                            <Border Width="20" Height="20" CornerRadius="10" BorderBrush="{TemplateBinding Foreground}" BorderThickness="1.3">
+                                                <TextBlock Text="?" Foreground="{TemplateBinding Foreground}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S1}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <Button.Foreground><SolidColorBrush Color="#FF3A3A38"/></Button.Foreground>
+                            </Button>
+                            <Button x:Name="BtnGithub" Cursor="Hand" Width="28" Height="28" Margin="0,0,6,0" ToolTip="GitHub" Click="BtnGithub_Click">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="Transparent" CornerRadius="14">
+                                            <Path Data="{StaticResource GithubGeo}" Fill="{TemplateBinding Foreground}" Width="16" Height="16" Stretch="Uniform"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S1}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <Button.Foreground><SolidColorBrush Color="#FF3A3A38"/></Button.Foreground>
+                            </Button>
+                            <TextBlock Text="v1.0.0" Foreground="{StaticResource T3}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- COLUMN HEADER -->
+                <Grid Grid.Row="2" Background="{StaticResource Bg}" Height="34">
+                    <Border BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1">
+                        <Grid Margin="32,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="46"/>
+                                <ColumnDefinition Width="4*"/>
+                                <ColumnDefinition Width="3*"/>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="#" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="{DynamicResource L_ColTitle}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="{DynamicResource L_ColArtist}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="{DynamicResource L_ColDuration}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- TRACK LIST + empty state -->
+                <Grid Grid.Row="3">
+                    <!-- Empty state -->
+                    <StackPanel x:Name="EmptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.9">
+                        <Path Width="40" Height="40" Stretch="Uniform" Data="M9,18 L9,5 L21,3 L21,16 M9,18 A3,3 0 1 1 3,18 A3,3 0 1 1 9,18 M21,16 A3,3 0 1 1 15,16 A3,3 0 1 1 21,16" Stroke="{StaticResource T2}" StrokeThickness="1.2" Fill="Transparent" Opacity="0.85" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TxtEmptyHint" Text="{DynamicResource L_LibEmpty}"
+                                   Foreground="{StaticResource T2}" FontSize="12"
+                                   Margin="0,14,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                <ListView x:Name="TrackList" Background="Transparent" BorderThickness="0"
+                          helpers:SmoothScroll.Enabled="True"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ScrollViewer.PanningMode="VerticalOnly"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Pixel"
+                          VirtualizingPanel.CacheLengthUnit="Pixel"
+                          VirtualizingPanel.CacheLength="200,200"
+                          AllowDrop="True"
+                          PreviewMouseLeftButtonDown="TrackList_PreviewMouseLeftButtonDown"
+                          PreviewMouseLeftButtonUp="TrackList_PreviewMouseLeftButtonUp"
+                          MouseMove="TrackList_MouseMove"
+                          KeyDown="TrackList_KeyDown"
+                          Drop="TrackList_Drop"
+                          DragOver="TrackList_DragOver">
+                    <ListView.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{DynamicResource L_CtxPlay}" Click="CtxPlay_Click">
+                                <MenuItem.Icon>
+                                    <Path Data="M5,3 L14,8.5 L5,14 Z" Fill="{DynamicResource Accent}" Width="13" Height="13" Stretch="Uniform"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{DynamicResource L_CtxPlayNext}" Click="CtxPlayNext_Click">
+                                <MenuItem.Icon>
+                                    <Path Data="M4,3 L11,8.5 L4,14 Z M13,3 L13,14" Stroke="{DynamicResource Accent}" StrokeThickness="1.6" Fill="{DynamicResource Accent}" StrokeLineJoin="Round" Width="14" Height="14" Stretch="Uniform"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem x:Name="CtxQueueMenuItem" Header="{DynamicResource L_CtxAddQueue}" Click="CtxAddQueue_Click">
+                                <MenuItem.Icon>
+                                    <Path Data="M3,5 L15,5 M3,9 L15,9 M3,13 L11,13" Stroke="{DynamicResource Accent}" StrokeThickness="1.6" StrokeStartLineCap="Round" Width="14" Height="14" Stretch="Uniform"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem x:Name="CtxAddPlaylistMenu" Header="{DynamicResource L_CtxAddPlaylist}" SubmenuOpened="CtxAddPlaylist_SubmenuOpened">
+                                <MenuItem.Icon>
+                                    <Path Data="M3,4 L13,4 M3,8 L13,8 M3,12 L9,12 M13,11 L13,17 M10,14 L16,14" Stroke="{DynamicResource Accent}" StrokeThickness="1.6" StrokeStartLineCap="Round" Width="15" Height="15" Stretch="Uniform"/>
+                                </MenuItem.Icon>
+                                <!-- placeholder so this is a submenu header; replaced on open -->
+                                <MenuItem Header=""/>
+                            </MenuItem>
+                            <MenuItem x:Name="CtxRemovePlaylistItem" Header="{DynamicResource L_CtxRemovePlaylist}" Click="CtxRemoveFromPlaylist_Click" Visibility="Collapsed">
+                                <MenuItem.Icon>
+                                    <Path Data="M4,9 L14,9" Stroke="{DynamicResource Accent}" StrokeThickness="1.8" StrokeStartLineCap="Round" Width="14" Height="14" Stretch="Uniform"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="{DynamicResource L_CtxEditTags}" Click="CtxEditTags_Click">
+                                <MenuItem.Icon>
+                                    <Path Data="M4,14 L4,11 L13,2 L16,5 L7,14 Z M11,4 L14,7" Stroke="{DynamicResource Accent}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{DynamicResource L_CtxDelete}" Click="CtxDelete_Click" Style="{StaticResource DangerMenuItem}">
+                                <MenuItem.Icon>
+                                    <Path Data="M3,5 L15,5 M6,5 L6,3 L12,3 L12,5 M5,5 L5,15 L13,15 L13,5 M8,8 L8,12 M10,8 L10,12" Stroke="{StaticResource Danger}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListViewItem">
+                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1" Padding="0">
+                                            <Grid>
+                                                <Rectangle x:Name="accentBar" Width="2" HorizontalAlignment="Left" Fill="Transparent"/>
+                                                <ContentPresenter/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S1}"/>
+                                            </Trigger>
+                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                <!-- Subtle: no background tint — just left accent stripe + title color signal current track -->
+                                                <Setter TargetName="accentBar" Property="Fill" Value="{DynamicResource Accent}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                                                <!-- Greyed out when the file no longer exists on disk -->
+                                                <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                                                <Setter Property="ToolTip" Value="{DynamicResource L_MissingFile}"/>
+                                            </DataTrigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="32,8" Height="36">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="46"/>
+                                    <ColumnDefinition Width="4*"/>
+                                    <ColumnDefinition Width="3*"/>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="60"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Track number / eq bars -->
+                                <Grid Grid.Column="0">
+                                    <!-- Track number (visible when NOT current) -->
+                                    <TextBlock Text="{Binding Index}" Foreground="{StaticResource T3}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <!-- Eq bars when current. Fixed Height=12 + Bottom-align so bars grow upward without the whole group floating. -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Height="14">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <!-- EQ bars: animate Height directly (Rectangle DP, not Freezable path — safe in recycled containers) -->
+                                        <Rectangle Width="3" Height="3" Fill="{DynamicResource Accent}" VerticalAlignment="Bottom" Margin="0,0,2,0">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCurrentPlaying}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard x:Name="eq1_sb">
+                                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Height" From="3" To="12" Duration="0:0:0.7">
+                                                                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <StopStoryboard BeginStoryboardName="eq1_sb"/>
+                                                            </DataTrigger.ExitActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                        <Rectangle Width="3" Height="3" Fill="{DynamicResource Accent}" VerticalAlignment="Bottom" Margin="0,0,2,0">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCurrentPlaying}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard x:Name="eq2_sb">
+                                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True" BeginTime="0:0:0.15">
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Height" From="3" To="12" Duration="0:0:0.7">
+                                                                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <StopStoryboard BeginStoryboardName="eq2_sb"/>
+                                                            </DataTrigger.ExitActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                        <Rectangle Width="3" Height="3" Fill="{DynamicResource Accent}" VerticalAlignment="Bottom">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCurrentPlaying}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard x:Name="eq3_sb">
+                                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True" BeginTime="0:0:0.3">
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Height" From="3" To="12" Duration="0:0:0.7">
+                                                                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <StopStoryboard BeginStoryboardName="eq3_sb"/>
+                                                            </DataTrigger.ExitActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Grid.Column="1" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" Width="36" Height="36" HorizontalAlignment="Left">
+                                    <Grid>
+                                        <!-- HTML th-img: SVG note shown when no cover, otherwise <img> overlays it -->
+                                        <Path Data="M9,18 L9,5 L21,3 L21,16 M9,18 A3,3 0 1 1 3,18 A3,3 0 1 1 9,18 M21,16 A3,3 0 1 1 15,16 A3,3 0 1 1 21,16"
+                                              Stroke="{StaticResource T3}" StrokeThickness="1.5" Fill="Transparent"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="14">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                            <Setter Property="Text" Value="{Binding Title}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Grid.Column="3" Text="{Binding Artist}" Foreground="{StaticResource T2}" FontSize="14" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="4" Text="{Binding DurationStr}" Foreground="{StaticResource T3}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                <!-- Row action buttons -->
+                                <Grid Grid.Column="5">
+                                    <!-- Queue ＋ button: visible on row hover, ALWAYS visible if track is in queue (in accent) -->
+                                    <Button HorizontalAlignment="Right" Margin="0,0,28,0" VerticalAlignment="Center"
+                                            Click="RowQueue_Click" Tag="{Binding}" ToolTip="{DynamicResource L_RowQueueAdd}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource RowActionButton}">
+                                                <Setter Property="Opacity" Value="0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsMouseOver}" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsInQueue}" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="＋"/>
+                                    </Button>
+                                    <!-- Delete ✕ button: visible on row hover, red on its own hover -->
+                                    <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Click="RowDelete_Click" Tag="{Binding}" ToolTip="{DynamicResource L_RowDelete}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource RowActionDangerButton}">
+                                                <Setter Property="Opacity" Value="0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsMouseOver}" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="✕"/>
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- QUEUE PANEL (slide-in from right) -->
+        <!-- Queue backdrop (HTML #qBd) — click to dismiss -->
+        <Border x:Name="QueueBackdrop" Grid.Row="0" Background="#66000000" Opacity="0" Visibility="Collapsed" Panel.ZIndex="50" MouseLeftButtonDown="QueueBackdrop_MouseDown"/>
+        <!-- Top margin = caption height (36) so the header's ✕ CLOSE pill clears the window control buttons -->
+        <views:QueuePanel x:Name="QueuePanelView" Grid.Row="0" HorizontalAlignment="Right" Margin="0,36,0,0" Visibility="Collapsed" Panel.ZIndex="51"/>
+
+        <!-- PROFILE OVERLAY -->
+        <views:ProfileView x:Name="ProfileOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="100"/>
+
+        <!-- NOW PLAYING fullscreen overlay -->
+        <views:NowPlayingView x:Name="NowPlayingOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="150"/>
+
+        <!-- HELP overlay -->
+        <views:HelpView x:Name="HelpOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="160"/>
+
+        <!-- SETTINGS overlay -->
+        <views:SettingsOverlay x:Name="SettingsOverlayView" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="170"/>
+
+        <!-- FILE MANAGER overlay -->
+        <views:FileManagerView x:Name="FileManagerOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="175"/>
+
+        <!-- ADD TRACKS TO PLAYLIST picker -->
+        <views:PlaylistAddView x:Name="PlaylistAddOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="176"/>
+
+        <!-- LOGS overlay -->
+        <views:LogView x:Name="LogOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="178"/>
+
+        <!-- DROP overlay (when dragging external files) -->
+        <Border x:Name="DropOverlay" Grid.RowSpan="2" Background="#E60A0A0A" BorderBrush="{DynamicResource AccentDim}" BorderThickness="2" Visibility="Collapsed" Panel.ZIndex="180" IsHitTestVisible="False">
+            <TextBlock Text="{DynamicResource L_DropTitle}" Foreground="{DynamicResource Accent}" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+
+        <!-- TOAST -->
+        <views:Toast x:Name="ToastView" Grid.RowSpan="2" Panel.ZIndex="200"/>
+
+        <!-- Custom chrome buttons — refined: thin strokes, rounded caps, soft geometry -->
+        <StackPanel Grid.RowSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Panel.ZIndex="500">
+            <Button x:Name="BtnMin" Style="{StaticResource ChromeButton}" Click="BtnMin_Click" ToolTip="{DynamicResource L_TooltipMin}"
+                    WindowChrome.IsHitTestVisibleInChrome="True">
+                <!-- Minimize: short rounded segment, slightly above baseline so it looks centered -->
+                <Path Data="M1,5 L9,5"
+                      Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                      StrokeThickness="1" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Width="10" Height="10"/>
+            </Button>
+            <Button x:Name="BtnMax" Style="{StaticResource ChromeButton}" Click="BtnMax_Click" ToolTip="{DynamicResource L_TooltipMax}"
+                    WindowChrome.IsHitTestVisibleInChrome="True">
+                <Grid Width="10" Height="10">
+                    <!-- Normal: single rounded square -->
+                    <Rectangle x:Name="MaxNormal" Width="10" Height="10"
+                               Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                               StrokeThickness="1" Fill="Transparent" RadiusX="1.5" RadiusY="1.5"/>
+                    <!-- Maximized: two overlapping rounded squares (restore icon), hidden by default -->
+                    <Grid x:Name="MaxRestore" Visibility="Collapsed">
+                        <Rectangle Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                   Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                   StrokeThickness="1" Fill="Transparent" RadiusX="1.2" RadiusY="1.2"/>
+                        <Rectangle Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                   Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                   StrokeThickness="1" Fill="{StaticResource Bg}" RadiusX="1.2" RadiusY="1.2"/>
+                    </Grid>
+                </Grid>
+            </Button>
+            <Button x:Name="BtnClose" Style="{StaticResource ChromeCloseButton}" Click="BtnClose_Click" ToolTip="{DynamicResource L_TooltipClose}"
+                    WindowChrome.IsHitTestVisibleInChrome="True">
+                <!-- Close: slim X with rounded line ends, slightly inset -->
+                <Path Data="M1,1 L9,9 M9,1 L1,9"
+                      Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                      StrokeThickness="1" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Width="10" Height="10"/>
+            </Button>
+        </StackPanel>
+
+        <!-- Tag editor -->
+        <views:TagEditor x:Name="TagEditorOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="690"/>
+
+        <!-- Text input dialog (new playlist / rename) -->
+        <views:InputDialog x:Name="InputOverlay" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="710"/>
+
+        <!-- Custom confirmation dialog -->
+        <views:ConfirmDialog x:Name="ConfirmOverlay" Grid.RowSpan="2" Panel.ZIndex="700"/>
+
+        <!-- SPLASH on top -->
+        <views:Splash x:Name="SplashOverlay" Grid.RowSpan="2" Panel.ZIndex="999"/>
+
+        <!-- ─── BOTTOM BAR ─── -->
+        <Border x:Name="BottomBarBorder" Grid.Row="1" Background="{StaticResource Sb}" BorderBrush="{StaticResource B1}" BorderThickness="0,1,0,0">
+            <Border.Effect>
+                <DropShadowEffect x:Name="BarGlow" Color="#C8A96E" BlurRadius="0" ShadowDepth="0" Opacity="0" Direction="90"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Top: full-width progress bar (13% padding symmetric like HTML) -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="13*"/>
+                        <ColumnDefinition Width="74*"/>
+                        <ColumnDefinition Width="13*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="1" Margin="0,8,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="44"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="44"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="TxtTimeCur" Grid.Column="0" Text="0:00" Foreground="{StaticResource T2}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Slider x:Name="SldProgress" Grid.Column="1" Minimum="0" Maximum="1" Value="0"
+                            VerticalAlignment="Center" Margin="12,0"
+                            Style="{StaticResource WaveSlider}"
+                            Thumb.DragStarted="SldProgress_DragStarted"
+                            Thumb.DragCompleted="SldProgress_DragCompleted"
+                            PreviewMouseDown="SldProgress_PreviewMouseDown"
+                            PreviewMouseUp="SldProgress_PreviewMouseUp"/>
+                    <TextBlock x:Name="TxtTimeTot" Grid.Column="2" Text="0:00" Foreground="{StaticResource T2}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+                </Grid>
+
+                <!-- Main row: meta | controls | volume -->
+                <Grid Grid.Row="1" Margin="28,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- LEFT: cover + title/artist -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <Border x:Name="BarCoverBorder" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" Width="54" Height="54" Cursor="Hand" ToolTip="{DynamicResource L_CoverFullscreen}" MouseLeftButtonUp="BarCover_Click" MouseEnter="BarCover_MouseEnter" MouseLeave="BarCover_MouseLeave" RenderTransformOrigin="0.5,0.5">
+                            <Border.Effect>
+                                <DropShadowEffect x:Name="BarCoverGlow" Color="#C8A96E" BlurRadius="0" ShadowDepth="0" Opacity="0"/>
+                            </Border.Effect>
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BarCoverScale" ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
+                            <Grid>
+                                <!-- HTML #bAF2 — small music-note SVG, hidden when cover loads -->
+                                <Path x:Name="BarCoverNote"
+                                      Data="M9,18 L9,5 L21,3 L21,16 M9,18 A3,3 0 1 1 3,18 A3,3 0 1 1 9,18 M21,16 A3,3 0 1 1 15,16 A3,3 0 1 1 21,16"
+                                      Stroke="{StaticResource T3}" StrokeThickness="1.5" Fill="Transparent"
+                                      Width="20" Height="20" Stretch="Uniform"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image x:Name="ImgBarCover" Stretch="UniformToFill"/>
+                                <!-- Expand cue overlay -->
+                                <Grid x:Name="ExpandCue" Background="#8C000000" Opacity="0">
+                                    <TextBlock Text="⛶" Foreground="{StaticResource T1}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                        <StackPanel x:Name="BarMetaPanel" VerticalAlignment="Center" Margin="14,0,0,0">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform x:Name="BarMetaTrans" Y="0"/>
+                            </StackPanel.RenderTransform>
+                            <TextBlock x:Name="TxtBarTitle" Text="{DynamicResource L_NoTrack}" Foreground="{StaticResource T1}" FontSize="14" FontWeight="Medium"/>
+                            <TextBlock x:Name="TxtBarArtist" Text="{DynamicResource L_PickFromPlaylist}" Foreground="{StaticResource T2}" FontSize="11" FontWeight="Light" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- CENTER: transport controls -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <Button x:Name="BtnShuffle" Style="{StaticResource CtrlButton}" Click="BtnShuffle_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave" ToolTip="{DynamicResource L_TooltipShuffle}">
+                            <Path Data="{StaticResource ShuffleGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" Fill="Transparent" Width="17" Height="17" Stretch="Uniform"/>
+                        </Button>
+                        <Button x:Name="BtnPrev" Style="{StaticResource CtrlButton}" Click="BtnPrev_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave" ToolTip="{DynamicResource L_TooltipPrev}" Margin="10,0">
+                            <Path Data="{StaticResource PrevGeo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Width="20" Height="20" Stretch="Uniform"/>
+                        </Button>
+                        <Button x:Name="BtnPlay" Style="{StaticResource PlayCircleButton}" Click="BtnPlay_Click" MouseEnter="BtnPlay_MouseEnter" MouseLeave="BtnPlay_MouseLeave" ToolTip="{DynamicResource L_TooltipPlayPause}">
+                            <Path x:Name="PathPlay" Data="{StaticResource PlayGeo}" Fill="{StaticResource Bg}" Width="14" Height="14" Stretch="Uniform"/>
+                        </Button>
+                        <Button x:Name="BtnNext" Style="{StaticResource CtrlButton}" Click="BtnNext_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave" ToolTip="{DynamicResource L_TooltipNext}" Margin="10,0">
+                            <Path Data="{StaticResource NextGeo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Width="20" Height="20" Stretch="Uniform"/>
+                        </Button>
+                        <Button x:Name="BtnRepeat" Style="{StaticResource CtrlButton}" Click="BtnRepeat_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave" ToolTip="{DynamicResource L_TooltipRepeat}">
+                            <!-- Single geometry, two states via opacity/color only -->
+                            <Path Data="{StaticResource RepeatGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" Fill="Transparent" Width="17" Height="17" Stretch="Uniform"/>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- RIGHT: queue + sleep + volume -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <!-- Queue (quick access without going to top) -->
+                        <Button x:Name="BtnQueueBottom" Style="{StaticResource CtrlButton}" Width="28" Height="28" Margin="0,0,4,0"
+                                Click="BtnQueue_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave"
+                                ToolTip="{DynamicResource L_TooltipQueue}">
+                            <Path Data="M8,6 L21,6 M8,12 L21,12 M8,18 L21,18 M4,6 L4.01,6 M4,12 L4.01,12 M4,18 L4.01,18"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Fill="Transparent" Width="16" Height="16" Stretch="Uniform"/>
+                        </Button>
+                        <!-- Sleep timer -->
+                        <Button x:Name="BtnSleep" Style="{StaticResource CtrlButton}" Width="28" Height="28" Margin="0,0,12,0"
+                                Click="BtnSleep_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave"
+                                ToolTip="{DynamicResource L_TooltipSleep}">
+                            <Path x:Name="PathSleep" Data="{StaticResource HourglassGeo}"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.8"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Fill="Transparent" Width="16" Height="16" Stretch="Uniform"/>
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="SleepMenu">
+                                    <MenuItem Header="{DynamicResource L_Sleep15}" Tag="15"  Click="SleepMenu_Click"/>
+                                    <MenuItem Header="{DynamicResource L_Sleep30}" Tag="30"  Click="SleepMenu_Click"/>
+                                    <MenuItem Header="{DynamicResource L_Sleep45}" Tag="45"  Click="SleepMenu_Click"/>
+                                    <MenuItem Header="{DynamicResource L_Sleep1h}" Tag="60"  Click="SleepMenu_Click"/>
+                                    <MenuItem Header="{DynamicResource L_Sleep2h}" Tag="120" Click="SleepMenu_Click"/>
+                                    <Separator/>
+                                    <MenuItem StaysOpenOnClick="True" Focusable="False">
+                                        <MenuItem.Header>
+                                            <StackPanel Width="240" Margin="2,4,2,4">
+                                                <Grid Margin="0,0,0,6">
+                                                    <TextBlock Text="{DynamicResource L_SleepCustom}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Left"/>
+                                                    <TextBlock x:Name="TxtSleepCustomLabel" Text="30"
+                                                               Foreground="{DynamicResource Accent}" FontSize="11" FontWeight="Bold"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                                <Slider x:Name="SldSleepCustom"
+                                                        Style="{StaticResource ThinSlider}"
+                                                        Minimum="1" Maximum="180" Value="30"
+                                                        IsSnapToTickEnabled="True" TickFrequency="1"
+                                                        ValueChanged="SldSleepCustom_ValueChanged"
+                                                        Thumb.DragCompleted="SldSleepCustom_DragCompleted"
+                                                        PreviewMouseLeftButtonUp="SldSleepCustom_MouseUp"
+                                                        ToolTip="{DynamicResource L_SleepCustomHint}"/>
+                                            </StackPanel>
+                                        </MenuItem.Header>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="{DynamicResource L_SleepCancel}" Tag="0" Click="SleepMenu_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <Button x:Name="BtnMute" Style="{StaticResource CtrlButton}" Width="28" Height="28" Margin="0,0,8,0"
+                                Click="BtnMute_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave"
+                                ToolTip="{DynamicResource L_TooltipMute}">
+                            <Path x:Name="PathMute" Data="{StaticResource VolumeGeo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform"/>
+                        </Button>
+                        <Slider x:Name="SldVolume" Width="160" Minimum="0" Maximum="1" Value="0.8"
+                                Style="{StaticResource ThinSlider}"
+                                ValueChanged="SldVolume_ValueChanged"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+        <!-- White outline — drawn on top of everything so it's never hidden by content -->
+        <Border x:Name="WindowBorderOverlay" Grid.RowSpan="2" CornerRadius="10"
+                BorderBrush="#33FFFFFF" BorderThickness="1"
+                IsHitTestVisible="False" Panel.ZIndex="1000"/>
+    </Grid>
+    </Border>
+</Window>

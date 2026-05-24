@@ -1,0 +1,150 @@
+<UserControl x:Class="SoundCheck.Views.PlaylistAddView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:SoundCheck.Helpers"
+             Background="#EB050505"
+             Opacity="0"
+             RenderTransformOrigin="0.5,0.5">
+    <UserControl.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform x:Name="StScale" ScaleX="0.96" ScaleY="0.96"/>
+            <TranslateTransform x:Name="StTrans" Y="22"/>
+        </TransformGroup>
+    </UserControl.RenderTransform>
+
+    <Grid x:Name="BackdropGrid" Background="Transparent" MouseLeftButtonDown="Backdrop_MouseDown">
+        <Border Width="720" MinHeight="520" MaxHeight="900" Margin="0,40"
+                Background="{StaticResource Sb}"
+                BorderBrush="{StaticResource B1}" BorderThickness="1"
+                CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                MouseLeftButtonDown="Card_MouseDown">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="40" ShadowDepth="12" Opacity="0.55"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- HEADER -->
+                <Border Grid.Row="0" Padding="28,22,18,18" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource L_AddTracksTitle}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtPlaylistName" Text="" Foreground="{StaticResource T1}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <Button x:Name="BtnClose" Style="{StaticResource PillButton}"
+                                Content="{DynamicResource L_BtnCloseShort}"
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Foreground="{StaticResource T3}" Padding="14,7" FontSize="12" FontWeight="Bold"
+                                Click="BtnClose_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- SEARCH -->
+                <Border Grid.Row="1" Margin="28,18,28,0" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="14,0" Height="42">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource SearchGeo}" Stroke="{StaticResource T2}" StrokeThickness="2" Fill="Transparent" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <Grid Margin="10,0,0,0" Width="600">
+                            <TextBox x:Name="TxtSearch" Background="Transparent" Foreground="{StaticResource T1}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" CaretBrush="{StaticResource T1}" TextChanged="TxtSearch_TextChanged"/>
+                            <TextBlock x:Name="TxtSearchPh" Text="{DynamicResource L_TrackSearchPh}" Foreground="{StaticResource T3}" FontSize="13" VerticalAlignment="Center" IsHitTestVisible="False" Margin="2,0,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- LIST -->
+                <Border Grid.Row="2" Margin="28,16,28,22" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="9">
+                    <Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True" Padding="6">
+                            <ItemsControl x:Name="TracksList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="7" Margin="2,1" Padding="8,6" Cursor="Hand"
+                                                MouseLeftButtonUp="Row_Click">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource S2}"/>
+                                                        </Trigger>
+                                                        <DataTrigger Binding="{Binding InPlaylist}" Value="True">
+                                                            <Setter Property="Background" Value="#14C8A96E"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Width="34" Height="34" CornerRadius="4" ClipToBounds="True" Background="{StaticResource S3}" Margin="0,0,12,0">
+                                                    <Grid>
+                                                        <Path Data="{StaticResource LogoGeo}" Fill="{StaticResource T3}" Width="14" Height="14" Stretch="Uniform" Opacity="0.35"/>
+                                                        <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource T1}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Artist}" Foreground="{StaticResource T3}" FontSize="11" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                                <!-- Indicator only — the whole row is clickable -->
+                                                <Border Grid.Column="2" BorderThickness="1" CornerRadius="15" Width="30" Height="30" VerticalAlignment="Center" IsHitTestVisible="False">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{StaticResource S2}"/>
+                                                            <Setter Property="BorderBrush" Value="{StaticResource B1}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding InPlaylist}" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Path Data="M9,4 L9,14 M4,9 L14,9" Stroke="{StaticResource T2}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <Path.Style>
+                                                                <Style TargetType="Path">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding InPlaylist}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Path.Style>
+                                                        </Path>
+                                                        <Path Data="M4,9 L8,13 L14,5" Stroke="#FF0E0E0E" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <Path.Style>
+                                                                <Style TargetType="Path">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding InPlaylist}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Path.Style>
+                                                        </Path>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock x:Name="TxtEmpty" Text="{DynamicResource L_TracksNotFound}" Foreground="{StaticResource T2}" FontSize="13"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

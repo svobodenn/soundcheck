@@ -1,0 +1,230 @@
+<UserControl x:Class="SoundCheck.Views.QueuePanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:SoundCheck.Helpers"
+             Width="360"
+             Background="{StaticResource Sb}"
+             RenderTransformOrigin="0,0">
+    <UserControl.Effect>
+        <DropShadowEffect Color="Black" BlurRadius="30" ShadowDepth="0" Opacity="0.5"/>
+    </UserControl.Effect>
+    <UserControl.RenderTransform>
+        <TranslateTransform x:Name="SlideTransform" X="360"/>
+    </UserControl.RenderTransform>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Left border -->
+        <Border Grid.RowSpan="3" Background="{StaticResource B1}" Width="1" HorizontalAlignment="Left"/>
+
+        <!-- Header: title + live count/duration summary -->
+        <Border Grid.Row="0" Height="64" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1">
+            <Grid Margin="24,0">
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource L_QueueHeader}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold"/>
+                    <TextBlock x:Name="TxtQueueSummary" Foreground="{StaticResource T3}" FontSize="11" Margin="0,3,0,0"/>
+                </StackPanel>
+                <Button Style="{StaticResource PillButton}" Content="{DynamicResource L_BtnCloseShort}" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="11,7" FontSize="10" Foreground="{StaticResource T3}" Click="BtnClose_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- List -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True">
+            <StackPanel>
+                <ItemsControl x:Name="QueueList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="56" Cursor="Hand" AllowDrop="True"
+                                  RenderTransformOrigin="0.5,0.5"
+                                  MouseLeftButtonUp="QueueItem_MouseLeftButtonUp"
+                                  PreviewMouseLeftButtonDown="QueueItem_PreviewMouseLeftButtonDown"
+                                  MouseMove="QueueItem_MouseMove"
+                                  DragOver="QueueItem_DragOver"
+                                  Drop="QueueItem_Drop">
+                                <Grid.RenderTransform>
+                                    <TranslateTransform x:Name="rowTrans" X="0"/>
+                                </Grid.RenderTransform>
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource S1}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+                                <!-- Subtle fade + slide-in when the row first appears -->
+                                <Grid.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="0" To="1" Duration="0:0:0.26" FillBehavior="Stop"/>
+                                                <DoubleAnimation Storyboard.TargetName="rowTrans" Storyboard.TargetProperty="X"
+                                                                 From="24" To="0" Duration="0:0:0.32" FillBehavior="Stop">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Grid.Triggers>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Accent stripe on left if current -->
+                                <Rectangle Grid.ColumnSpan="4" Width="2" HorizontalAlignment="Left">
+                                    <Rectangle.Style>
+                                        <Style TargetType="Rectangle">
+                                            <Setter Property="Fill" Value="Transparent"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                    <Setter Property="Fill" Value="{DynamicResource Accent}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Rectangle.Style>
+                                </Rectangle>
+                                <!-- Drag handle (grip) — appears on row hover -->
+                                <TextBlock Grid.Column="0" Text="⋮⋮" FontSize="13" FontWeight="Bold"
+                                           Foreground="{StaticResource T3}" Margin="14,0,0,0"
+                                           VerticalAlignment="Center" IsHitTestVisible="False">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Opacity" Value="0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=IsMouseOver}" Value="True">
+                                                    <Setter Property="Opacity" Value="1"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Border Grid.Column="1" Width="36" Height="36" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" Margin="10,0,11,0" VerticalAlignment="Center">
+                                    <Grid>
+                                        <Path Data="M9,18 L9,5 L21,3 L21,16 M9,18 A3,3 0 1 1 3,18 A3,3 0 1 1 9,18 M21,16 A3,3 0 1 1 15,16 A3,3 0 1 1 21,16"
+                                              Stroke="{StaticResource T3}" StrokeThickness="1.5" Fill="Transparent"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                    </Grid>
+                                </Border>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource T1}" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Artist}" Foreground="{StaticResource T2}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <Button Grid.Column="3" Content="✕" Background="Transparent" BorderThickness="0"
+                                        Cursor="Hand" Width="36" Height="36"
+                                        FontSize="13" Margin="0,0,12,0" Click="BtnRemove_Click"
+                                        Tag="{Binding Index}">
+                                    <!-- HTML: .q-rm{opacity:0} .q-item:hover .q-rm{opacity:1}; .q-rm:hover{color:#e05555} -->
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Opacity" Value="0"/>
+                                            <Setter Property="Foreground" Value="{StaticResource T3}"/>
+                                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="Transparent">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=IsMouseOver}" Value="True">
+                                                    <Setter Property="Opacity" Value="1"/>
+                                                </DataTrigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock x:Name="TxtEmpty" Text="{DynamicResource L_QueueEmpty}"
+                           Foreground="{StaticResource T3}" FontSize="11" TextAlignment="Center" Padding="24,32"
+                           LineHeight="18" TextWrapping="Wrap"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer: Play all + Shuffle + Clear -->
+        <Border Grid.Row="2" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="0,1,0,0">
+            <StackPanel Margin="14,12">
+                <Button x:Name="BtnPlayAll" Content="{DynamicResource L_QueuePlayAll}" FontWeight="Bold" FontSize="10" Cursor="Hand" Click="BtnPlayAll_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{DynamicResource Accent}" CornerRadius="6" Padding="0,10">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.3"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Button.Foreground><SolidColorBrush Color="#FF0E0E0E"/></Button.Foreground>
+                </Button>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="{DynamicResource L_QueueShuffle}" FontWeight="Bold" FontSize="10" Cursor="Hand" Click="BtnShuffle_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="{StaticResource Sb}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="0,9">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                        <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource B2}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Button.Foreground><SolidColorBrush Color="#FF3A3A38"/></Button.Foreground>
+                    </Button>
+                    <Button Grid.Column="2" Content="{DynamicResource L_QueueClear}" FontWeight="Bold" FontSize="10" Cursor="Hand" Click="BtnClear_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="{StaticResource Sb}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="0,9">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <!-- HTML .sa.d:hover { border-color:#5a2a2a; color:#e05555; background:rgba(90,42,42,.08) } -->
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background"><Setter.Value><SolidColorBrush Color="#145A2A2A"/></Setter.Value></Setter>
+                                        <Setter TargetName="bd" Property="BorderBrush"><Setter.Value><SolidColorBrush Color="#FF5A2A2A"/></Setter.Value></Setter>
+                                        <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Button.Foreground><SolidColorBrush Color="#FF3A3A38"/></Button.Foreground>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

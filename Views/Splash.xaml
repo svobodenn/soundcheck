@@ -1,0 +1,36 @@
+<UserControl x:Class="SoundCheck.Views.Splash"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource Bg}">
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+
+            <!-- Tiny equalizer logo, gently pulsing -->
+            <StackPanel x:Name="LogoBars" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,22">
+                <Rectangle Width="3" Height="20" Fill="{DynamicResource Accent}" Margin="0,0,3,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><ScaleTransform x:Name="Bar1Scale" ScaleY="0.4"/></Rectangle.RenderTransform>
+                </Rectangle>
+                <Rectangle Width="3" Height="20" Fill="{DynamicResource Accent}" Margin="0,0,3,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><ScaleTransform x:Name="Bar2Scale" ScaleY="0.85"/></Rectangle.RenderTransform>
+                </Rectangle>
+                <Rectangle Width="3" Height="20" Fill="{DynamicResource Accent}" Margin="0,0,3,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><ScaleTransform x:Name="Bar3Scale" ScaleY="0.6"/></Rectangle.RenderTransform>
+                </Rectangle>
+                <Rectangle Width="3" Height="20" Fill="{DynamicResource Accent}" Margin="0,0,3,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><ScaleTransform x:Name="Bar4Scale" ScaleY="1.0"/></Rectangle.RenderTransform>
+                </Rectangle>
+                <Rectangle Width="3" Height="20" Fill="{DynamicResource Accent}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><ScaleTransform x:Name="Bar5Scale" ScaleY="0.45"/></Rectangle.RenderTransform>
+                </Rectangle>
+            </StackPanel>
+
+            <!-- Letters appear one-by-one (driven from code-behind) -->
+            <StackPanel x:Name="LetterHost" Orientation="Horizontal" HorizontalAlignment="Center"/>
+
+            <!-- Thin accent line that grows under the title -->
+            <Rectangle x:Name="ProgressLine" Height="1" Width="0"
+                       Fill="{DynamicResource Accent}" HorizontalAlignment="Center"
+                       Margin="0,18,0,0" Opacity="0.6"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RootNamespace>SoundCheck</RootNamespace>
+    <AssemblyName>soundcheck</AssemblyName>
+    <Product>SoundCheck</Product>
+    <AssemblyTitle>SoundCheck</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <Authors>svobodenn</Authors>
+    <Company>svobodenn</Company>
+    <Description>SoundCheck — a bilingual (RU/EN) desktop music player for Windows: crossfade, equalizer, playlists, live visualizer, tag editor and file manager.</Description>
+    <Copyright>Copyright (c) 2026 svobodenn</Copyright>
+    <RepositoryType>git</RepositoryType>
+    <LangVersion>latest</LangVersion>
+    <ApplicationIcon>Assets\soundcheck.ico</ApplicationIcon>
+    <!-- DPI awareness is declared (PerMonitorV2) in app.manifest, which WPF reads.
+         Silence the WinForms analyzer that wants it moved to a project property. -->
+    <NoWarn>$(NoWarn);WFO0003;WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <!-- UseWindowsForms adds System.Drawing + System.Windows.Forms to implicit
+       usings, which makes Point/Color/ListViewItem ambiguous against WPF.
+       Remove them — TrayIcon.cs and TrayMenu.xaml.cs use full qualification. -->
+  <ItemGroup>
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\**\*.*" />
+    <Resource Include="fonts\*.ttf" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Precompile to native code for noticeably faster cold start. Safe for WPF
+         (no trimming, which would break XAML/reflection). -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredCompilation>true</TieredCompilation>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+</Project>

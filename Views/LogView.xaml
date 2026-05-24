@@ -1,0 +1,101 @@
+<UserControl x:Class="SoundCheck.Views.LogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:SoundCheck.Helpers"
+             Background="#EB050505"
+             Opacity="0"
+             RenderTransformOrigin="0.5,0.5">
+    <UserControl.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform x:Name="LgScale" ScaleX="0.96" ScaleY="0.96"/>
+            <TranslateTransform x:Name="LgTrans" Y="22"/>
+        </TransformGroup>
+    </UserControl.RenderTransform>
+
+    <UserControl.Resources>
+        <Style x:Key="LogBtn" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource T2}"/>
+            <Setter Property="Padding" Value="13,7"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S3}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource B2}"/>
+                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid x:Name="BackdropGrid" Background="Transparent" MouseLeftButtonDown="Backdrop_MouseDown">
+        <Border Width="760" MaxHeight="640"
+                Background="{StaticResource Sb}"
+                BorderBrush="{StaticResource B1}" BorderThickness="1"
+                CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MouseLeftButtonDown="Card_MouseDown">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="40" ShadowDepth="12" Opacity="0.55"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- HEADER -->
+                <Border Grid.Row="0" Padding="28,22,18,18" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid>
+                            <Border Background="{DynamicResource Accent}" Width="3" Height="32" HorizontalAlignment="Left" CornerRadius="2"/>
+                            <StackPanel Margin="16,0,0,0">
+                                <TextBlock Text="{DynamicResource L_LogsTitle}" Foreground="{StaticResource T1}" FontSize="22" FontWeight="SemiBold"/>
+                                <TextBlock Text="{DynamicResource L_LogsSubtitle}" Foreground="{StaticResource T2}" FontSize="12" Margin="0,3,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                        <Button x:Name="BtnClose" Style="{StaticResource PillButton}"
+                                Content="{DynamicResource L_BtnCloseShort}"
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Foreground="{StaticResource T3}" Padding="14,7" FontSize="12" FontWeight="Bold"
+                                Click="BtnClose_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- TOOLBAR -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="28,16,28,0">
+                    <Button Style="{StaticResource LogBtn}" Content="{DynamicResource L_LogsRefresh}" Margin="0,0,8,0" Click="BtnRefresh_Click"/>
+                    <Button Style="{StaticResource LogBtn}" Content="{DynamicResource L_LogsCopy}" Margin="0,0,8,0" Click="BtnCopy_Click"/>
+                    <Button Style="{StaticResource LogBtn}" Content="{DynamicResource L_LogsOpenFile}" Margin="0,0,8,0" Click="BtnOpenFile_Click"/>
+                    <Button Style="{StaticResource LogBtn}" Content="{DynamicResource L_LogsClear}" Click="BtnClear_Click"
+                            Foreground="{StaticResource Danger}"/>
+                </StackPanel>
+
+                <!-- CONTENT -->
+                <Border Grid.Row="2" Margin="28,14,28,22" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8">
+                    <Grid>
+                        <TextBox x:Name="TxtLog" IsReadOnly="True" Background="Transparent" BorderThickness="0"
+                                 Foreground="{StaticResource T2}" FontFamily="Consolas, Courier New" FontSize="12"
+                                 Padding="14,12" TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                 IsTabStop="False"/>
+                        <TextBlock x:Name="TxtEmpty" Text="{DynamicResource L_LogsEmpty}" Foreground="{StaticResource T2}" FontSize="13"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

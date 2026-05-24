@@ -1,0 +1,761 @@
+<UserControl x:Class="SoundCheck.Views.SettingsOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:SoundCheck.Helpers"
+             Background="#EB050505"
+             Opacity="0"
+             RenderTransformOrigin="0.5,0.5">
+    <UserControl.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform x:Name="StScale" ScaleX="0.96" ScaleY="0.96"/>
+            <TranslateTransform x:Name="StTrans" Y="22"/>
+        </TransformGroup>
+    </UserControl.RenderTransform>
+
+    <UserControl.Resources>
+        <!-- Reusable styles for inline-row layouts -->
+        <Style x:Key="CategoryHeader" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <!-- "↺ reset" link button — bigger target + soft pill on hover -->
+        <Style x:Key="ResetLink" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource T2}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,6">
+                            <ContentPresenter HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Toggle (switch) — small pill that animates background between Off / Accent -->
+        <Style x:Key="Toggle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="track" Width="38" Height="20" CornerRadius="10"
+                                Background="{StaticResource S3}" BorderBrush="{StaticResource B1}" BorderThickness="1">
+                            <Ellipse x:Name="knob" Width="14" Height="14" Fill="{StaticResource T2}"
+                                     HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="knob"  Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="knob"  Property="Margin" Value="0,0,3,0"/>
+                                <Setter TargetName="knob"  Property="Fill">
+                                    <Setter.Value><SolidColorBrush Color="#FF0E0E0E"/></Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Chip for step pickers (Seek/Volume) — radio buttons styled as pills -->
+        <Style x:Key="StepChip" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource T3}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="14,6" Margin="3,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource T2}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter Property="Foreground"><Setter.Value><SolidColorBrush Color="#FF0E0E0E"/></Setter.Value></Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Equalizer preset chip (Button variant of StepChip) -->
+        <Style x:Key="PresetChip" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource T3}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="14,6" Margin="3,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentDim}"/>
+                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Generic row: label + control on the right -->
+        <Style x:Key="RowGrid" TargetType="Grid">
+            <Setter Property="Margin" Value="0,6"/>
+        </Style>
+
+        <!-- Accent color swatch — round preset, ring appears on hover / when selected -->
+        <Style x:Key="AccentSwatch" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid>
+                            <Ellipse x:Name="ring" Stroke="Transparent" StrokeThickness="2"/>
+                            <Ellipse x:Name="dot" Margin="3" Fill="{TemplateBinding Background}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ring" Property="Stroke" Value="{StaticResource B2}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ring" Property="Stroke" Value="{StaticResource T1}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Accent color dropdown item: colored dot + name, check on selected -->
+        <Style x:Key="AccentComboItem" TargetType="ComboBoxItem">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{StaticResource T1}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,9" Margin="4,1">
+                            <Grid>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                                <Path x:Name="chk" Data="M2,7 L6,11 L13,3" Stroke="{StaticResource T1}" StrokeThickness="1.8"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
+                                      Width="15" Height="12" Stretch="Uniform" HorizontalAlignment="Right" Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="chk" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Accent color dropdown (named presets with dots) -->
+        <Style x:Key="AccentCombo" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{StaticResource T1}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource AccentComboItem}"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="12" Height="12" Fill="{Binding Brush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Name}" Margin="11,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource T1}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="bd" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="7" Padding="12,9">
+                                            <Grid>
+                                                <ContentPresenter Margin="0,0,22,0" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                                  Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                                                <Path Data="M1,3 L6,8 L11,3" Stroke="{StaticResource T2}" StrokeThickness="1.5"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      HorizontalAlignment="Right" VerticalAlignment="Center" Width="12" Height="7" Stretch="Uniform"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource B2}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Popup IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   AllowsTransparency="True" Placement="Bottom" PopupAnimation="Fade" Focusable="False">
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="7"
+                                        Margin="0,4,0,0" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ComboBox}}" Padding="0,4">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="4" Opacity="0.5"/>
+                                    </Border.Effect>
+                                    <ItemsPresenter/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Inline-editable track title — invisible until hovered/focused -->
+        <Style x:Key="TrackTitleEdit" TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource T1}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource T1}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S3}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Sb}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Neutral outline button (replaces default WPF chrome → no blue hover) -->
+        <Style x:Key="OutlineButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource T2}"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource B2}"/>
+                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Danger outline button (delete / reset) — soft red wash on hover -->
+        <Style x:Key="DangerOutlineButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background"><Setter.Value><SolidColorBrush Color="#145A2A2A"/></Setter.Value></Setter>
+                                <Setter TargetName="bd" Property="BorderBrush"><Setter.Value><SolidColorBrush Color="#FF5A2A2A"/></Setter.Value></Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small ✕ icon button (track delete) — rounded dark hover, red glyph -->
+        <Style x:Key="DeleteIconButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource T3}"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S3}"/>
+                                <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Left-rail navigation item -->
+        <Style x:Key="NavItem" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="{StaticResource T2}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="14,11">
+                            <Grid>
+                                <Border x:Name="bar" Width="3" Height="14" CornerRadius="2" HorizontalAlignment="Left"
+                                        Background="{DynamicResource Accent}" Opacity="0"/>
+                                <ContentPresenter Margin="14,0,0,0" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                <Setter TargetName="bar" Property="Opacity" Value="1"/>
+                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid x:Name="BackdropGrid" Background="Transparent" MouseLeftButtonDown="Backdrop_MouseDown">
+        <Border Width="860" MinHeight="560" MaxHeight="940" Margin="0,40"
+                Background="{StaticResource Sb}"
+                BorderBrush="{StaticResource B1}" BorderThickness="1"
+                CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                MouseLeftButtonDown="Card_MouseDown">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="40" ShadowDepth="12" Opacity="0.55"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- HEADER -->
+                <Border Grid.Row="0" Padding="28,22,18,18" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid Margin="0,0,0,0">
+                            <Border Background="{DynamicResource Accent}" Width="3" Height="32" HorizontalAlignment="Left" CornerRadius="2"/>
+                            <StackPanel Margin="16,0,0,0">
+                                <TextBlock Text="{DynamicResource L_SettingsHeader}" Foreground="{StaticResource T2}" FontSize="12" FontWeight="Bold" Margin="0,0,0,4"/>
+                                <TextBlock Text="{DynamicResource L_SettingsSubtitle}" Foreground="{StaticResource T1}" FontSize="22" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+                        <Button x:Name="BtnClose" Style="{StaticResource PillButton}"
+                                Content="{DynamicResource L_BtnCloseShort}"
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Foreground="{StaticResource T3}" Padding="14,7" FontSize="12" FontWeight="Bold"
+                                Click="BtnClose_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- BODY: left nav rail + right content pane -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="208"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- NAV RAIL -->
+                    <Border Grid.Column="0" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="0,0,1,0">
+                        <StackPanel Margin="14,18">
+                            <RadioButton x:Name="NavData"      Tag="data"      GroupName="navcat" Style="{StaticResource NavItem}" Content="{DynamicResource L_CatData}"      Checked="Nav_Checked"/>
+                            <RadioButton x:Name="NavPlayback"  Tag="playback"  GroupName="navcat" Style="{StaticResource NavItem}" Content="{DynamicResource L_CatPlayback}"  Checked="Nav_Checked"/>
+                            <RadioButton x:Name="NavInterface" Tag="interface" GroupName="navcat" Style="{StaticResource NavItem}" Content="{DynamicResource L_CatInterface}" Checked="Nav_Checked"/>
+                            <RadioButton x:Name="NavSystem"    Tag="system"    GroupName="navcat" Style="{StaticResource NavItem}" Content="{DynamicResource L_CatSystem}"    Checked="Nav_Checked"/>
+                            <RadioButton x:Name="NavLanguage"  Tag="language"  GroupName="navcat" Style="{StaticResource NavItem}" Content="{DynamicResource L_CatLanguage}"  Checked="Nav_Checked"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CONTENT PANES (only one visible at a time) -->
+                    <Grid Grid.Column="1">
+
+                        <!-- ══ DATA ══ -->
+                        <ScrollViewer x:Name="PaneData" VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True" Visibility="Visible">
+                            <StackPanel Margin="28,22,28,22">
+                                <Grid Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="4" Height="4" Fill="{DynamicResource Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_CatData}" Foreground="{StaticResource T2}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button Style="{StaticResource ResetLink}" Content="{DynamicResource L_ResetLink}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BtnResetData_Click"/>
+                                </Grid>
+
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource L_LibraryFolder}" Foreground="{StaticResource T2}" FontSize="13" FontWeight="Bold" Margin="0,0,0,6"/>
+                                        <Border Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
+                                            <TextBlock x:Name="TxtLibPath" Text="" Foreground="{StaticResource T1}" FontSize="12" FontFamily="Consolas, Courier New" TextTrimming="CharacterEllipsis"/>
+                                        </Border>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <Button Content="{DynamicResource L_BtnOpen}" Click="BtnOpenLib_Click"
+                                                    Style="{StaticResource OutlineButton}" Margin="0,0,8,0"/>
+                                            <Button Content="{DynamicResource L_BtnChange}" Click="BtnChangeLib_Click"
+                                                    Style="{StaticResource OutlineButton}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="TxtLibStats" Text="—" Foreground="{StaticResource T2}" FontSize="13" Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Backup / restore all data -->
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource L_BackupData}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_BackupDataDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,10" TextWrapping="Wrap"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="{DynamicResource L_BackupExportBtn}" Click="BtnExportDb_Click"
+                                                    Style="{StaticResource OutlineButton}" Margin="0,0,8,0"/>
+                                            <Button Content="{DynamicResource L_BackupImportBtn}" Click="BtnImportDb_Click"
+                                                    Style="{StaticResource OutlineButton}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Remove tracks whose files are gone -->
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="{DynamicResource L_CleanMissing}" Foreground="{StaticResource T1}" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Content="{DynamicResource L_CleanMissingBtn}" Click="BtnCleanMissing_Click"
+                                                    Style="{StaticResource OutlineButton}"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <TextBlock Text="{DynamicResource L_CleanMissingDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Delete database file -->
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="{DynamicResource L_DeleteDb}" Foreground="{StaticResource T1}" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Content="{DynamicResource L_DeleteDbBtn}" Click="BtnDeleteDb_Click"
+                                                    Style="{StaticResource DangerOutlineButton}"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <TextBlock Text="{DynamicResource L_DeleteDbDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Diagnostics: logs -->
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,12,0,0">
+                                    <Grid>
+                                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" MaxWidth="470">
+                                            <TextBlock Text="{DynamicResource L_LogsTitle}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                            <TextBlock Text="{DynamicResource L_LogsSubtitle}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button Content="{DynamicResource L_LogsBtn}" Click="BtnLogs_Click"
+                                                Style="{StaticResource OutlineButton}"
+                                                HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ══ PLAYBACK ══ -->
+                        <ScrollViewer x:Name="PanePlayback" VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True" Visibility="Collapsed">
+                            <StackPanel Margin="28,22,28,22">
+                                <Grid Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="4" Height="4" Fill="{DynamicResource Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_CatPlayback}" Foreground="{StaticResource T2}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button Style="{StaticResource ResetLink}" Content="{DynamicResource L_ResetLink}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BtnResetPlay_Click"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_RememberTrack}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_RememberTrackDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkRemember" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- Crossfade between tracks -->
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_Crossfade}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_CrossfadeDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel x:Name="GrpCrossfade" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <RadioButton Tag="0"  Style="{StaticResource StepChip}" Content="{DynamicResource L_Off}" GroupName="xf"/>
+                                        <RadioButton Tag="2"  Style="{StaticResource StepChip}" Content="2s"  GroupName="xf"/>
+                                        <RadioButton Tag="4"  Style="{StaticResource StepChip}" Content="4s"  GroupName="xf"/>
+                                        <RadioButton Tag="8"  Style="{StaticResource StepChip}" Content="8s"  GroupName="xf"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Equalizer enable -->
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_Equalizer}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_EqualizerDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkEq" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- Equalizer bands + presets -->
+                                <Border x:Name="EqPanel" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="10" Padding="18,16" Margin="0,4,0,0">
+                                    <StackPanel>
+                                        <StackPanel x:Name="EqBandsHost" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                                            <Button Tag="flat"   Style="{StaticResource PresetChip}" Content="{DynamicResource L_EqFlat}"   Click="EqPreset_Click"/>
+                                            <Button Tag="bass"   Style="{StaticResource PresetChip}" Content="{DynamicResource L_EqBass}"   Click="EqPreset_Click"/>
+                                            <Button Tag="vocal"  Style="{StaticResource PresetChip}" Content="{DynamicResource L_EqVocal}"  Click="EqPreset_Click"/>
+                                            <Button Tag="treble" Style="{StaticResource PresetChip}" Content="{DynamicResource L_EqTreble}" Click="EqPreset_Click"/>
+                                            <Border Width="1" Background="{StaticResource B1}" Margin="6,2"/>
+                                            <Button x:Name="BtnEqCustom" Tag="custom" Style="{StaticResource PresetChip}" Content="{DynamicResource L_EqCustom}" Click="EqPreset_Click"/>
+                                            <Button x:Name="BtnEqSaveCustom" Style="{StaticResource PresetChip}" Content="{DynamicResource L_EqSaveCustom}" Click="EqSaveCustom_Click"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ══ INTERFACE ══ -->
+                        <ScrollViewer x:Name="PaneInterface" VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True" Visibility="Collapsed">
+                            <StackPanel Margin="28,22,28,22">
+                                <Grid Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="4" Height="4" Fill="{DynamicResource Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_CatInterface}" Foreground="{StaticResource T2}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button Style="{StaticResource ResetLink}" Content="{DynamicResource L_ResetLink}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BtnResetUi_Click"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_Particles}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_ParticlesDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkParticles" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_FloatingBg}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_FloatingBgDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkFloatBg" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_LogoEq}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_LogoEqDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkLogoEq" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_BlurBg}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_BlurBgDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkBlurBg" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_ReduceMotion}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_ReduceMotionDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkReduceMotion" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- Accent color: master toggle + preset palette (palette dims when following cover) -->
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_AccentFromCover}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_AccentFromCoverDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkAccentCover" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <StackPanel x:Name="AccentPaletteRow" Margin="0,6">
+                                    <TextBlock Text="{DynamicResource L_AccentColorLabel}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                    <TextBlock Text="{DynamicResource L_AccentColorDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    <ComboBox x:Name="CmbAccent" Style="{StaticResource AccentCombo}" Width="220"
+                                              HorizontalAlignment="Left" Margin="0,12,0,2" SelectionChanged="CmbAccent_SelectionChanged"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ══ SYSTEM ══ -->
+                        <ScrollViewer x:Name="PaneSystem" VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True" Visibility="Collapsed">
+                            <StackPanel Margin="28,22,28,22">
+                                <Grid Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="4" Height="4" Fill="{DynamicResource Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_CatSystem}" Foreground="{StaticResource T2}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button Style="{StaticResource ResetLink}" Content="{DynamicResource L_ResetLink}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BtnResetSys_Click"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_AutoStart}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_AutoStartDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkAutoStart" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_CloseToTray}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_CloseToTrayDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkCloseToTray" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left">
+                                        <TextBlock Text="{DynamicResource L_MinToTray}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_MinToTrayDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkMinToTray" Style="{StaticResource Toggle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ══ LANGUAGE ══ -->
+                        <ScrollViewer x:Name="PaneLanguage" VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True" Visibility="Collapsed">
+                            <StackPanel Margin="28,22,28,22">
+                                <Grid Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="4" Height="4" Fill="{DynamicResource Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_CatLanguage}" Foreground="{StaticResource T2}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Style="{StaticResource RowGrid}">
+                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource L_LanguagePickLabel}" Foreground="{StaticResource T1}" FontSize="15"/>
+                                        <TextBlock Text="{DynamicResource L_LanguagePickDesc}" Foreground="{StaticResource T2}" FontSize="13" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel x:Name="GrpLang" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <RadioButton Tag="ru" Style="{StaticResource StepChip}" GroupName="lang">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="18" Height="12" CornerRadius="2" ClipToBounds="True" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                    <StackPanel>
+                                                        <Rectangle Height="4" Fill="#FFFFFF"/>
+                                                        <Rectangle Height="4" Fill="#0039A6"/>
+                                                        <Rectangle Height="4" Fill="#D52B1E"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <TextBlock Text="Русский" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </RadioButton>
+                                        <RadioButton Tag="en" Style="{StaticResource StepChip}" GroupName="lang">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="18" Height="12" CornerRadius="2" ClipToBounds="True" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                    <Viewbox Stretch="Fill">
+                                                        <Grid Width="60" Height="30" Background="#012169">
+                                                            <Line X1="0" Y1="0" X2="60" Y2="30" Stroke="White" StrokeThickness="7"/>
+                                                            <Line X1="0" Y1="30" X2="60" Y2="0" Stroke="White" StrokeThickness="7"/>
+                                                            <Line X1="0" Y1="0" X2="60" Y2="30" Stroke="#C8102E" StrokeThickness="2.5"/>
+                                                            <Line X1="0" Y1="30" X2="60" Y2="0" Stroke="#C8102E" StrokeThickness="2.5"/>
+                                                            <Rectangle Width="60" Height="12" Fill="White" VerticalAlignment="Center"/>
+                                                            <Rectangle Width="12" Height="30" Fill="White" HorizontalAlignment="Center"/>
+                                                            <Rectangle Width="60" Height="6" Fill="#C8102E" VerticalAlignment="Center"/>
+                                                            <Rectangle Width="6" Height="30" Fill="#C8102E" HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Border>
+                                                <TextBlock Text="English" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </RadioButton>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                    </Grid>
+                </Grid>
+
+                <!-- FOOTER: global reset -->
+                <Border Grid.Row="2" BorderBrush="{StaticResource B1}" BorderThickness="0,1,0,0" Padding="28,16,28,18">
+                    <Grid>
+                        <TextBlock Text="{DynamicResource L_ResetAllHint}" Foreground="{StaticResource T2}" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"/>
+                        <Button x:Name="BtnResetAll" Click="BtnResetAll_Click"
+                                Content="{DynamicResource L_ResetAllBig}"
+                                Style="{StaticResource DangerOutlineButton}"
+                                FontWeight="Bold" FontSize="14" Padding="22,12"
+                                HorizontalAlignment="Right"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

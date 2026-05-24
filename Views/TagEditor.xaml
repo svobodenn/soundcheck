@@ -1,0 +1,156 @@
+<UserControl x:Class="SoundCheck.Views.TagEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#CC050505"
+             Opacity="0"
+             Visibility="Collapsed"
+             RenderTransformOrigin="0.5,0.5">
+    <UserControl.RenderTransform>
+        <ScaleTransform x:Name="TeScale" ScaleX="0.94" ScaleY="0.94"/>
+    </UserControl.RenderTransform>
+    <UserControl.Resources>
+        <Style x:Key="TagField" TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource T1}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource T1}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="bd" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}"
+                                BorderThickness="1" CornerRadius="8" Padding="12,9">
+                            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentDim}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <Grid x:Name="BackdropGrid" Background="Transparent" MouseLeftButtonDown="Backdrop_MouseDown">
+        <Border Width="460" MaxWidth="520"
+                Background="{StaticResource Sb}"
+                BorderBrush="{StaticResource B1}" BorderThickness="1"
+                CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Padding="28,26,28,22"
+                MouseLeftButtonDown="Card_MouseDown">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="40" ShadowDepth="12" Opacity="0.55"/>
+            </Border.Effect>
+            <StackPanel>
+                <Border Background="{DynamicResource Accent}" Height="3" Width="40" CornerRadius="2"
+                        HorizontalAlignment="Left" Margin="0,0,0,16"/>
+                <TextBlock Text="{DynamicResource L_TagEditTitle}"
+                           Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold"
+                           Margin="0,0,0,6"/>
+                <TextBlock x:Name="TxtFile" Text=""
+                           Foreground="{StaticResource T1}" FontSize="14" FontWeight="Medium"
+                           TextTrimming="CharacterEllipsis" Margin="0,0,0,18"/>
+
+                <!-- Cover art -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                    <Border Width="72" Height="72" CornerRadius="6" ClipToBounds="True"
+                            Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1">
+                        <Grid>
+                            <Path Data="M9,18 L9,5 L21,3 L21,16 M9,18 A3,3 0 1 1 3,18 A3,3 0 1 1 9,18 M21,16 A3,3 0 1 1 15,16 A3,3 0 1 1 21,16"
+                                  Stroke="{StaticResource T3}" StrokeThickness="1.4" Fill="Transparent"
+                                  Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image x:Name="ImgCover" Stretch="UniformToFill"/>
+                        </Grid>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Margin="14,0,0,0">
+                        <Button x:Name="BtnChangeCover" Content="{DynamicResource L_TagCoverChange}" Click="ChangeCover_Click"
+                                Cursor="Hand" FontSize="11" FontWeight="Bold" HorizontalAlignment="Left" Margin="0,0,0,8">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="bd" Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="12,7">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentDim}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <Button.Foreground><SolidColorBrush Color="#FF9A938A"/></Button.Foreground>
+                        </Button>
+                        <Button x:Name="BtnRemoveCover" Content="{DynamicResource L_TagCoverRemove}" Click="RemoveCover_Click"
+                                Cursor="Hand" FontSize="11" FontWeight="Bold" HorizontalAlignment="Left">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="6" Padding="12,7">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="BorderBrush"><Setter.Value><SolidColorBrush Color="#FF5A2A2A"/></Setter.Value></Setter>
+                                            <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <Button.Foreground><SolidColorBrush Color="#FF686460"/></Button.Foreground>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Text="{DynamicResource L_TagFieldTitle}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                <TextBox x:Name="TxtTitle" Style="{StaticResource TagField}" Margin="0,0,0,14"/>
+
+                <TextBlock Text="{DynamicResource L_TagFieldArtist}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                <TextBox x:Name="TxtArtist" Style="{StaticResource TagField}" Margin="0,0,0,14"/>
+
+                <TextBlock Text="{DynamicResource L_TagFieldAlbum}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                <TextBox x:Name="TxtAlbum" Style="{StaticResource TagField}" Margin="0,0,0,24"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="BtnCancel" Content="{DynamicResource L_ConfirmCancel}" Click="Cancel_Click" Margin="0,0,10,0"
+                            FontWeight="Bold" FontSize="11" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="Transparent"
+                                        BorderBrush="{StaticResource B1}" BorderThickness="1"
+                                        CornerRadius="7" Padding="20,9">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                        <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource B2}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Button.Foreground><SolidColorBrush Color="#FF686460"/></Button.Foreground>
+                    </Button>
+                    <Button x:Name="BtnSave" Content="{DynamicResource L_TagSave}" Click="Save_Click"
+                            FontWeight="Bold" FontSize="11" Cursor="Hand" Foreground="{DynamicResource Accent}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="Transparent"
+                                        BorderBrush="{DynamicResource AccentDim}" BorderThickness="1"
+                                        CornerRadius="7" Padding="20,9">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

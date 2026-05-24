@@ -1,0 +1,109 @@
+<UserControl x:Class="SoundCheck.Views.NowPlayingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#E5050505"
+             RenderTransformOrigin="0.5,0.5"
+             Opacity="0">
+    <UserControl.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform x:Name="NPScale" ScaleX="0.96" ScaleY="0.96"/>
+            <TranslateTransform x:Name="NPTrans" Y="24"/>
+        </TransformGroup>
+    </UserControl.RenderTransform>
+    <Grid x:Name="BackdropGrid" Background="Transparent" MouseLeftButtonDown="Backdrop_MouseDown">
+        <!-- Blurred BG -->
+        <Image x:Name="BgImg" Stretch="UniformToFill" Opacity="0.55">
+            <Image.Effect>
+                <BlurEffect Radius="80" KernelType="Gaussian"/>
+            </Image.Effect>
+        </Image>
+        <Rectangle Fill="#90000000"/>
+
+        <!-- Close button -->
+        <Button x:Name="BtnClose"
+                Style="{StaticResource PillButton}"
+                Content="{DynamicResource L_BtnCloseShort}"
+                HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,24,24,0" Padding="14,7"
+                FontSize="11" FontWeight="Bold"
+                Click="BtnClose_Click"/>
+
+        <!-- Main content — clicks here are swallowed so they don't close the overlay -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MouseLeftButtonDown="Card_MouseDown"
+                    Background="Transparent">
+
+            <!-- Album art (square) -->
+            <Grid Width="340" Height="340" HorizontalAlignment="Center">
+                <Grid.Effect>
+                    <DropShadowEffect x:Name="VinylShadow" Color="#C8A96E" BlurRadius="40" ShadowDepth="0" Opacity="0.10"/>
+                </Grid.Effect>
+                <Border Width="340" Height="340" CornerRadius="16" ClipToBounds="True"
+                        Background="#0D0D0D" BorderBrush="#1A1A1A" BorderThickness="1">
+                    <Grid>
+                        <Path x:Name="VinylNote"
+                              Data="M9,18 L9,5 L21,3 L21,16 M9,18 A3,3 0 1 1 3,18 A3,3 0 1 1 9,18 M21,16 A3,3 0 1 1 15,16 A3,3 0 1 1 21,16"
+                              Stroke="{StaticResource T2}" StrokeThickness="0.8" Fill="Transparent"
+                              Width="120" Height="120" Stretch="Uniform"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image x:Name="VinylImg" Stretch="UniformToFill"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Title + artist — HTML np-title 22px, gap-7px, np-artist 12px upper, margin-bottom 24 -->
+            <TextBlock x:Name="TxtTitle" Text="{DynamicResource L_NoTrack}"
+                       Foreground="{StaticResource T1}"
+                       FontSize="22" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" Margin="0,28,0,7"/>
+            <TextBlock x:Name="TxtArtist" Text=""
+                       Foreground="{StaticResource T2}"
+                       FontSize="12"
+                       HorizontalAlignment="Center" Margin="0,0,0,4"/>
+
+            <!-- Live spectrum visualizer (bars built in code) -->
+            <StackPanel x:Name="SpectrumHost" Orientation="Horizontal" Height="46"
+                        VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,16,0,2"/>
+
+            <!-- Progress — HTML margin-bottom 20px -->
+            <Grid Width="480" Margin="0,20,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="44"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="TxtCur" Text="0:00" Grid.Column="0"
+                           Foreground="{StaticResource T2}" FontSize="11"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Slider x:Name="SldProg" Grid.Column="1" Minimum="0" Maximum="1" Value="0"
+                        Style="{StaticResource ThinSlider}"
+                        VerticalAlignment="Center" Margin="14,0"
+                        Thumb.DragStarted="SldProg_DragStarted"
+                        Thumb.DragCompleted="SldProg_DragCompleted"
+                        PreviewMouseUp="SldProg_PreviewMouseUp"/>
+                <TextBlock x:Name="TxtTot" Text="0:00" Grid.Column="2"
+                           Foreground="{StaticResource T2}" FontSize="11"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- Controls — HTML np-cp 60×60, np-cb default ~36 with 10px padding, gap 22 between -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                <Button x:Name="BtnShuffle" Style="{StaticResource CtrlButton}" Width="44" Height="44" Click="BtnShuffle_Click">
+                    <Path Data="{StaticResource ShuffleGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" Fill="Transparent" Width="20" Height="20" Stretch="Uniform"/>
+                </Button>
+                <Button x:Name="BtnPrev" Style="{StaticResource CtrlButton}" Width="44" Height="44" Click="BtnPrev_Click" Margin="22,0">
+                    <Path Data="{StaticResource PrevGeo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Width="24" Height="24" Stretch="Uniform"/>
+                </Button>
+                <Button x:Name="BtnPlay" Style="{StaticResource PlayCircleButton}" Width="60" Height="60" Click="BtnPlay_Click">
+                    <Path x:Name="PathPlay" Data="{StaticResource PlayGeo}" Fill="{StaticResource Bg}" Width="20" Height="20" Stretch="Uniform"/>
+                </Button>
+                <Button x:Name="BtnNext" Style="{StaticResource CtrlButton}" Width="44" Height="44" Click="BtnNext_Click" Margin="22,0">
+                    <Path Data="{StaticResource NextGeo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Width="24" Height="24" Stretch="Uniform"/>
+                </Button>
+                <Button x:Name="BtnRepeat" Style="{StaticResource CtrlButton}" Width="44" Height="44" Click="BtnRepeat_Click">
+                    <Path x:Name="PathRepeat" Data="{StaticResource RepeatGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" Fill="Transparent" Width="20" Height="20" Stretch="Uniform"/>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>
