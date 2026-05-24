@@ -1,8 +1,8 @@
 <div align="center">
 
-# soundcheck
+# SOUNDCHECK
 
-A music player for Windows — bilingual, single file, no installer.
+A music player for Windows - bilingual, single file, no installer.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-C8A96E.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4.svg)](https://dotnet.microsoft.com/)
@@ -42,7 +42,7 @@ library, keeps everything in a single SQLite file, and ships as one self-contain
 
 ## Build and run
 
-You need Windows and the .NET 10 SDK (only to build — the published app is self-contained).
+You need Windows and the .NET 10 SDK (only to build - the published app is self-contained).
 
 ```
 dotnet run -c Debug
@@ -55,7 +55,7 @@ dotnet publish -c Release
 ```
 
 It lands at `bin/Release/net10.0-windows/win-x64/publish/soundcheck.exe`. Copy it
-anywhere and run — no .NET needed on the machine.
+anywhere and run - no .NET needed on the machine.
 
 ## Data
 
@@ -76,4 +76,4 @@ WPF on .NET 10, [NAudio](https://github.com/naudio/NAudio) (playback, EQ, FFT),
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
