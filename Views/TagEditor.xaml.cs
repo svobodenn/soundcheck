@@ -18,6 +18,7 @@ public partial class TagEditor : UserControl
         public string Album = "";
         public bool CoverChanged;
         public byte[]? CoverBytes; // null + CoverChanged => remove cover
+        public bool IsExplicit;
     }
 
     private Action<Result?>? _onResult;
@@ -28,12 +29,13 @@ public partial class TagEditor : UserControl
 
     /// <summary>Open the editor pre-filled with a track's current tags + cover.</summary>
     public void Show(string fileName, string title, string artist, string album,
-                     byte[]? coverBytes, Action<Result?> onResult)
+                     byte[]? coverBytes, bool isExplicit, Action<Result?> onResult)
     {
         TxtFile.Text = fileName;
         TxtTitle.Text = title ?? "";
         TxtArtist.Text = artist ?? "";
         TxtAlbum.Text = album ?? "";
+        ChkExplicit.IsChecked = isExplicit;
         _onResult = onResult;
         _coverChanged = false;
         _coverBytes = coverBytes;
@@ -110,6 +112,7 @@ public partial class TagEditor : UserControl
             Album = TxtAlbum.Text.Trim(),
             CoverChanged = _coverChanged,
             CoverBytes = _coverBytes,
+            IsExplicit = ChkExplicit.IsChecked == true,
         });
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close(null);

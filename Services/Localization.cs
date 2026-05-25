@@ -312,6 +312,7 @@ public static class Localization
         ["TagSave"]            = ("Сохранить",            "Save"),
         ["TagCoverChange"]     = ("Изменить обложку",     "Change cover"),
         ["TagCoverRemove"]     = ("Удалить обложку",      "Remove cover"),
+        ["TagExplicit"]        = ("Ненормативный контент (E)", "Explicit content (E)"),
         ["ToastTagsSaved"]     = ("Теги сохранены",       "Tags saved"),
         ["ToastTagsFailed"]    = ("Не удалось сохранить теги (файл занят?)", "Couldn't save tags (file in use?)"),
 

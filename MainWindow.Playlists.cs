@@ -73,25 +73,22 @@ public partial class MainWindow
         PlayTracks(tracks, shuffle);
     }
 
-    /// <summary>Play a list of tracks: first immediately, rest queued in order (optionally shuffled).</summary>
+    /// <summary>Start playing a set of tracks as the playback context (▶ = in order, ⇄ = shuffled).
+    /// Playback then flows WITHIN this set (Next/auto-advance/shuffle) and loops at the end.</summary>
     private void PlayTracks(List<Track> tracks, bool shuffle)
     {
         if (tracks.Count == 0) { ToastView.Show(Localization.T("ToastPlaylistEmpty")); return; }
-        if (shuffle)
+        _playContext.Clear();
+        _playContext.AddRange(tracks);
+        _shuffleHistory.Clear();
+        // The ▶/⇄ buttons map directly onto the shuffle toggle.
+        if (_shuffle != shuffle)
         {
-            var rnd = new Random();
-            for (int i = tracks.Count - 1; i > 0; i--)
-            {
-                int j = rnd.Next(i + 1);
-                (tracks[i], tracks[j]) = (tracks[j], tracks[i]);
-            }
+            _shuffle = shuffle;
+            UpdateShuffleVisual();
+            _storage.SetSetting("shuffle", shuffle ? "1" : "0");
         }
-        // Push into the queue so Next flows through the list in order.
-        foreach (var t in _queue) t.IsInQueue = false;
-        _queue.Clear();
-        for (int i = 1; i < tracks.Count; i++) { _queue.Add(tracks[i]); tracks[i].IsInQueue = true; }
-        RefreshQueueUi();
-        PlayTrack(tracks[0]);
+        PlayTrack(shuffle ? PickShuffle(_playContext) : tracks[0]);
     }
 
     /// <summary>Show playlist-only actions (add tracks / cover) when a playlist is open.

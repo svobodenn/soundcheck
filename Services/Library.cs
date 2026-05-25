@@ -36,6 +36,7 @@ public static class Library
                 Duration = props?.Duration ?? TimeSpan.Zero,
                 CoverBytes = coverBytes,
                 Cover = cover,
+                IsExplicit = LooksExplicit(tag.Title) || LooksExplicit(tag.Album),
             };
         }
         catch
@@ -54,6 +55,11 @@ public static class Library
             catch { return null; }
         }
     }
+
+    /// <summary>Heuristic: a title/album mentioning "explicit" marks the track explicit.
+    /// (Users can also toggle it manually in the tag editor.)</summary>
+    private static bool LooksExplicit(string? s)
+        => !string.IsNullOrEmpty(s) && s.IndexOf("explicit", StringComparison.OrdinalIgnoreCase) >= 0;
 
     /// <summary>Decode cover bytes to a small thumbnail BitmapImage.</summary>
     public static BitmapImage? LoadThumb(byte[]? bytes, int maxSize)

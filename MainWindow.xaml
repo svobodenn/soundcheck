@@ -949,19 +949,40 @@
                                         <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
                                     </Grid>
                                 </Border>
-                                <TextBlock Grid.Column="2" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="14">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{StaticResource T1}"/>
-                                            <Setter Property="Text" Value="{Binding Title}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                    <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                <Grid Grid.Column="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Explicit (E) badge -->
+                                    <Border Grid.Column="0" Width="16" Height="16" CornerRadius="3" Background="{StaticResource S3}"
+                                            BorderBrush="{StaticResource B2}" BorderThickness="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsExplicit}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="E" Foreground="{StaticResource T1}" FontSize="9.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="14">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                                <Setter Property="Text" Value="{Binding Title}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
                                 <TextBlock Grid.Column="3" Text="{Binding Artist}" Foreground="{StaticResource T2}" FontSize="14" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Grid.Column="4" Text="{Binding DurationStr}" Foreground="{StaticResource T3}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 <!-- Row action buttons -->

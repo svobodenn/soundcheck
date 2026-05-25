@@ -115,6 +115,7 @@ public class Storage : IDisposable
         // Migrations for older schemas (silent if column already exists)
         TryExec("ALTER TABLE tracks ADD COLUMN album TEXT");
         TryExec("ALTER TABLE tracks ADD COLUMN cover_blob BLOB");
+        TryExec("ALTER TABLE tracks ADD COLUMN explicit INTEGER DEFAULT 0");
         TryExec("ALTER TABLE playlists ADD COLUMN cover_blob BLOB");
     }
 
@@ -143,7 +144,7 @@ public class Storage : IDisposable
     {
         var out_ = new List<StoredTrack>();
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "SELECT path, title, artist, album, duration_secs, cover_blob FROM tracks ORDER BY added_at";
+        cmd.CommandText = "SELECT path, title, artist, album, duration_secs, cover_blob, explicit FROM tracks ORDER BY added_at";
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {
@@ -159,6 +160,7 @@ public class Storage : IDisposable
                 Album = r.IsDBNull(3) ? "" : r.GetString(3),
                 DurationSecs = r.GetInt64(4),
                 CoverBlob = cover,
+                Explicit = !r.IsDBNull(6) && r.GetInt64(6) != 0,
             });
         }
         return out_;
@@ -168,8 +170,8 @@ public class Storage : IDisposable
     {
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = @"INSERT OR IGNORE INTO tracks
-            (path, title, artist, album, duration_secs, added_at, cover_blob)
-            VALUES ($p, $ti, $ar, $al, $d, $ts, $c)";
+            (path, title, artist, album, duration_secs, added_at, cover_blob, explicit)
+            VALUES ($p, $ti, $ar, $al, $d, $ts, $c, $e)";
         cmd.Parameters.AddWithValue("$p", t.Path);
         cmd.Parameters.AddWithValue("$ti", t.Title);
         cmd.Parameters.AddWithValue("$ar", t.Artist);
@@ -177,6 +179,17 @@ public class Storage : IDisposable
         cmd.Parameters.AddWithValue("$d", (long)t.Duration.TotalSeconds);
         cmd.Parameters.AddWithValue("$ts", TsNow());
         cmd.Parameters.AddWithValue("$c", (object?)t.CoverBytes ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$e", t.IsExplicit ? 1 : 0);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Set the explicit flag for a track.</summary>
+    public void UpdateTrackExplicit(string path, bool isExplicit)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "UPDATE tracks SET explicit = $e WHERE path = $p";
+        cmd.Parameters.AddWithValue("$e", isExplicit ? 1 : 0);
+        cmd.Parameters.AddWithValue("$p", path);
         cmd.ExecuteNonQuery();
     }
 
@@ -576,6 +589,7 @@ public class StoredTrack
     public string Album { get; set; } = "";
     public long DurationSecs { get; set; }
     public byte[]? CoverBlob { get; set; }
+    public bool Explicit { get; set; }
 }
 
 public class HistoryEntry

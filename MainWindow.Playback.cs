@@ -38,6 +38,7 @@ public partial class MainWindow
             _current = t;
             t.IsCurrent = true;
             t.IsCurrentPlaying = true;
+            RememberPlayed(t); // shuffle anti-repeat window
             _historyRecordedForCurrent = false;
             if (!_isPrevNav)
             {
@@ -388,7 +389,7 @@ public partial class MainWindow
 
     private void NextTrack()
     {
-        // Queue takes priority
+        // The user's explicit "play next" / queue always wins.
         if (_queue.Count > 0)
         {
             var next = _queue[0];
@@ -398,46 +399,69 @@ public partial class MainWindow
             PlayTrack(next);
             return;
         }
-        if (_allTracks.Count == 0) return;
-        Track? t;
+        var ctx = CurrentContext();
+        if (ctx.Count == 0) return;
+        Track t;
         if (_shuffle)
         {
-            t = _allTracks[new Random().Next(_allTracks.Count)];
+            t = PickShuffle(ctx);
         }
-        else if (_current != null)
+        else
         {
-            // HTML: loadTrack((S.cur+1) % S.pl.length, S.playing) — wrap around to first
-            var idx = _allTracks.IndexOf(_current);
-            t = _allTracks[(idx + 1) % _allTracks.Count];
+            int idx = _current != null ? ctx.IndexOf(_current) : -1;
+            t = idx >= 0 ? ctx[(idx + 1) % ctx.Count] : ctx[0]; // wrap → loops the context
         }
-        else t = _allTracks[0];
-        if (t != null) PlayTrack(t);
+        PlayTrack(t);
+    }
+
+    /// <summary>The active playback set: the playlist/search results being played, or the library.</summary>
+    private System.Collections.Generic.IList<Track> CurrentContext()
+        => _playContext.Count > 0 ? _playContext : _allTracks;
+
+    /// <summary>Capture the currently visible list as the playback context (call on a user-initiated play).</summary>
+    private void SetPlaybackContext()
+    {
+        _playContext.Clear();
+        _playContext.AddRange(_visible);
+    }
+
+    private static string TrackKey(Track t) => ((t.Title ?? "") + "|" + (t.Artist ?? "")).Trim().ToLowerInvariant();
+
+    /// <summary>Pick a random track from the context, avoiding recently played ones AND
+    /// near-duplicates (same title+artist) so shuffle doesn't repeat the same song.</summary>
+    private Track PickShuffle(System.Collections.Generic.IList<Track> ctx)
+    {
+        var recent = new System.Collections.Generic.HashSet<string>(_shuffleHistory);
+        var pool = new System.Collections.Generic.List<Track>();
+        foreach (var t in ctx)
+            if (t != _current && !recent.Contains(TrackKey(t))) pool.Add(t);
+        if (pool.Count == 0)
+            foreach (var t in ctx) if (t != _current) pool.Add(t); // everything's recent → relax
+        if (pool.Count == 0) return _current ?? ctx[0];
+        return pool[_rng.Next(pool.Count)];
+    }
+
+    /// <summary>Record a played track for shuffle anti-repeat (keeps a recent window).</summary>
+    private void RememberPlayed(Track t)
+    {
+        var key = TrackKey(t);
+        _shuffleHistory.Remove(key);
+        _shuffleHistory.Add(key);
+        int ctxSize = _playContext.Count > 0 ? _playContext.Count : _allTracks.Count;
+        int cap = Math.Max(1, Math.Min(ctxSize - 1, 30)); // always leave at least 1 choice
+        while (_shuffleHistory.Count > cap) _shuffleHistory.RemoveAt(0);
     }
 
     /// <summary>Would NextTrack actually have something to play (for crossfade pre-advance)?</summary>
-    private bool HasNextForCrossfade()
-    {
-        if (_queue.Count > 0) return true;
-        if (_shuffle) return true;
-        if (_current == null) return false;
-        return _allTracks.IndexOf(_current) < _allTracks.Count - 1;
-    }
+    private bool HasNextForCrossfade() => _queue.Count > 0 || CurrentContext().Count > 0;
 
     private void OnTrackEnded()
     {
         Dispatcher.Invoke(() =>
         {
-            // HTML: if(rep==='one') restart; else if(rep==='all'||cur<last) nextT(); else stop.
             if (_repeat == RepeatMode.One && _current != null) { PlayTrack(_current); return; }
-            // Auto-advance: queue first, otherwise stop at end of playlist (no 'all' mode in WPF)
-            if (_queue.Count > 0) { NextTrack(); return; }
-            if (_current != null && _allTracks.IndexOf(_current) >= _allTracks.Count - 1)
-            {
-                // Last track — stop, don't wrap
-                _audio.Stop();
-                UpdatePlayButton();
-                return;
-            }
+            // Auto-advance: queue → context (shuffle or sequential, wrapping so the
+            // playlist/library loops instead of stopping).
             NextTrack();
         });
     }

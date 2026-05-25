@@ -59,6 +59,14 @@ public class Track : INotifyPropertyChanged
         set { _isMissing = value; OnPropertyChanged(); }
     }
 
+    /// <summary>True → show the "E" explicit badge.</summary>
+    private bool _isExplicit;
+    public bool IsExplicit
+    {
+        get => _isExplicit;
+        set { _isExplicit = value; OnPropertyChanged(); }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

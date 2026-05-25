@@ -25,7 +25,7 @@ public partial class MainWindow
 
     private void CtxPlay_Click(object sender, RoutedEventArgs e)
     {
-        if (CtxTrack() is Track t) PlayTrack(t);
+        if (CtxTrack() is Track t) { SetPlaybackContext(); PlayTrack(t); }
     }
 
     /// <summary>Enter on the track list plays the selected track.</summary>
@@ -33,6 +33,7 @@ public partial class MainWindow
     {
         if (e.Key == Key.Enter && TrackList.SelectedItem is Track t)
         {
+            SetPlaybackContext();
             PlayTrack(t);
             e.Handled = true;
         }
@@ -63,7 +64,7 @@ public partial class MainWindow
     /// <summary>Open the tag editor for a track and persist edits to the file + library on save.</summary>
     private void OpenTagEditor(Track t)
     {
-        TagEditorOverlay.Show(Path.GetFileName(t.Path), t.Title, t.Artist, t.Album, t.CoverBytes, result =>
+        TagEditorOverlay.Show(Path.GetFileName(t.Path), t.Title, t.Artist, t.Album, t.CoverBytes, t.IsExplicit, result =>
         {
             if (result == null) return; // cancelled
             ApplyTagEdit(t, result);
@@ -87,7 +88,7 @@ public partial class MainWindow
             title = tags.title; artist = tags.artist; album = tags.album; cover = tags.cover;
         }
 
-        TagEditorOverlay.Show(Path.GetFileName(path), title, artist, album, cover, result =>
+        TagEditorOverlay.Show(Path.GetFileName(path), title, artist, album, cover, track?.IsExplicit ?? false, result =>
         {
             if (result == null) return;
             if (track != null)
@@ -134,7 +135,9 @@ public partial class MainWindow
                 _storage.UpdateTrackCover(t.Path, r.CoverBytes);
                 if (_current == t) { ApplyAccentFromCover(t.CoverBytes); UpdateBlurBg(t.CoverBytes); }
             }
+            t.IsExplicit = r.IsExplicit;
             _storage.UpdateTrackMeta(t.Path, title, r.Artist, r.Album);
+            _storage.UpdateTrackExplicit(t.Path, r.IsExplicit);
             RefreshVisible();
             RefreshRecent();
             RefreshQueueUi();

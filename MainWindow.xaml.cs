@@ -28,6 +28,11 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<Track> _allTracks = new();
     private readonly ObservableCollection<Track> _visible = new();
     private readonly List<Track> _queue = new();
+    // The set of tracks playback flows through (a playlist, search results, or the
+    // library). Next/shuffle/auto-advance operate WITHIN this, not the whole library.
+    private readonly List<Track> _playContext = new();
+    // Recently played track keys (title|artist) for smarter shuffle anti-repeat.
+    private readonly List<string> _shuffleHistory = new();
     private Track? _current;
     private bool _shuffle;
     private RepeatMode _repeat = RepeatMode.Off;
@@ -116,6 +121,7 @@ public partial class MainWindow : Window
                 CoverBytes = s.CoverBlob,
                 Cover = Library.LoadThumb(s.CoverBlob, 80),
                 IsMissing = !File.Exists(s.Path),
+                IsExplicit = s.Explicit,
             });
         }
         RefreshVisible();
@@ -668,7 +674,7 @@ public partial class MainWindow : Window
             var row = FindParent<ListViewItem>(d);
             if (row != null && row.DataContext is Track t)
             {
-                if (FindParent<Button>(d) == null) PlayTrack(t);
+                if (FindParent<Button>(d) == null) { SetPlaybackContext(); PlayTrack(t); }
             }
         }
         _dragItem = null;
@@ -722,7 +728,7 @@ public partial class MainWindow : Window
         RecentList.SelectedIndex = -1; // clear so re-clicking the same item still works
         if (string.IsNullOrEmpty(path)) return;
         var track = _allTracks.FirstOrDefault(t => string.Equals(t.Path, path, StringComparison.OrdinalIgnoreCase));
-        if (track != null) PlayTrack(track);
+        if (track != null) { _playContext.Clear(); PlayTrack(track); } // continue through the library
     }
 
     private static string FmtTime(TimeSpan t) =>

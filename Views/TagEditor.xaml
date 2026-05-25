@@ -109,7 +109,30 @@
                 <TextBox x:Name="TxtArtist" Style="{StaticResource TagField}" Margin="0,0,0,14"/>
 
                 <TextBlock Text="{DynamicResource L_TagFieldAlbum}" Foreground="{StaticResource T3}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
-                <TextBox x:Name="TxtAlbum" Style="{StaticResource TagField}" Margin="0,0,0,24"/>
+                <TextBox x:Name="TxtAlbum" Style="{StaticResource TagField}" Margin="0,0,0,16"/>
+
+                <!-- Explicit toggle -->
+                <CheckBox x:Name="ChkExplicit" Cursor="Hand" Margin="0,0,0,22" HorizontalAlignment="Left">
+                    <CheckBox.Template>
+                        <ControlTemplate TargetType="CheckBox">
+                            <StackPanel Orientation="Horizontal" Background="Transparent">
+                                <Border x:Name="box" Width="18" Height="18" CornerRadius="4" Background="{StaticResource S1}" BorderBrush="{StaticResource B2}" BorderThickness="1">
+                                    <Path x:Name="tick" Data="M4,9 L8,13 L14,5" Stroke="{DynamicResource Accent}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Margin="3" Visibility="Collapsed"/>
+                                </Border>
+                                <Border Width="18" Height="18" CornerRadius="3" Background="{StaticResource S3}" BorderBrush="{StaticResource B2}" BorderThickness="1" Margin="10,0,7,0" VerticalAlignment="Center">
+                                    <TextBlock Text="E" Foreground="{StaticResource T1}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{DynamicResource L_TagExplicit}" Foreground="{StaticResource T1}" FontSize="13" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                    <Setter TargetName="tick" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </CheckBox.Template>
+                </CheckBox>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="BtnCancel" Content="{DynamicResource L_ConfirmCancel}" Click="Cancel_Click" Margin="0,0,10,0"
