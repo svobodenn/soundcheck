@@ -41,12 +41,79 @@ public partial class MainWindow
         PlaylistList.SelectedItem = _currentPlaylistId is long id ? items.FirstOrDefault(i => i.Id == id) : null;
         _suppressPlaylistSel = false;
         PlaylistEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        // Keep the "Playlists" tab badge count in sync with the sidebar list.
+        try { TxtTabPlaylistsCount.Text = items.Count.ToString(); } catch { }
     }
 
     private void PlaylistList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPlaylistSel) return;
         if (PlaylistList.SelectedItem is PlaylistVm vm) SelectPlaylist(vm);
+    }
+
+    // ── Full "All playlists" page (cards) ─────────────────────────────────────
+    private bool _playlistsPageOpen;
+    private bool _playlistsPageWired;
+    private void BtnPlaylistsPage_Click(object sender, RoutedEventArgs e) => TogglePlaylistsPage(true);
+    private void BtnTabPlaylists_Click(object sender, RoutedEventArgs e) => TogglePlaylistsPage(true);
+
+    /// <summary>Rebuild the cards grid from the current playlists (used after create/rename/delete).</summary>
+    private void RefreshPlaylistsPageCards()
+    {
+        var cards = _storage.LoadPlaylists().Select(p => new Views.PlaylistsPageView.PlaylistCard
+        {
+            Id = p.Id, Name = p.Name, Count = p.Count, Cover = Library.LoadThumb(p.Cover, 160),
+        });
+        PlaylistsPageOverlay.SetItems(cards);
+        try { TxtTabPlaylistsCount.Text = _storage.LoadPlaylists().Count.ToString(); } catch { }
+    }
+
+    private void TogglePlaylistsPage(bool open)
+    {
+        _playlistsPageOpen = open;
+        if (open)
+        {
+            if (!_playlistsPageWired)
+            {
+                PlaylistsPageOverlay.Closed += () => TogglePlaylistsPage(false);
+                // Create-on-page: stay on the playlists page; just refresh the cards after the new one is created.
+                PlaylistsPageOverlay.NewRequested += () =>
+                {
+                    InputOverlay.Show(Localization.T("NewPlaylistTitle"), Localization.T("PlaylistNamePh"), "", name =>
+                    {
+                        if (string.IsNullOrWhiteSpace(name)) return;
+                        _storage.CreatePlaylist(name.Trim());
+                        RefreshPlaylistsUi();
+                        RefreshPlaylistsPageCards();
+                        ToastView.Show(string.Format(Localization.T("ToastPlaylistCreated"), name.Trim()));
+                    });
+                };
+                PlaylistsPageOverlay.OpenRequested += id => { TogglePlaylistsPage(false); SelectPlaylistById(id); };
+                PlaylistsPageOverlay.PlayRequested        += id => { PlayPlaylistById(id, false); };
+                PlaylistsPageOverlay.ShufflePlayRequested += id => { PlayPlaylistById(id, true); };
+                PlaylistsPageOverlay.RenameRequested      += id => RenamePlaylistById(id);
+                PlaylistsPageOverlay.DeleteRequested      += id => DeletePlaylistById(id);
+                PlaylistsPageOverlay.ExportRequested      += id => ExportPlaylistById(id);
+                PlaylistsPageOverlay.MergeRequested       += (src, dst) => { MergePlaylistsById(src, dst); RefreshPlaylistsPageCards(); };
+                PlaylistsPageOverlay.AddTracksRequested   += id => AddTracksToPlaylistById(id);
+                _playlistsPageWired = true;
+            }
+            RefreshPlaylistsPageCards();
+            // Always rebuild the "Merge with…" candidate list — it depends on existing playlists.
+            PlaylistsPageOverlay.SetAllPlaylists(_storage.LoadPlaylists().Select(p => (p.Id, p.Name)));
+            PlaylistsPageOverlay.Visibility = Visibility.Visible;
+            PlaylistsPageOverlay.AnimateIn();
+            // Tab state: Playlists active, All tracks inactive
+            SetTabActive(BtnTabAll, false);
+            SetTabActive(BtnTabPlaylists, true);
+        }
+        else
+        {
+            PlaylistsPageOverlay.AnimateOut(() => PlaylistsPageOverlay.Visibility = Visibility.Collapsed);
+            SetTabActive(BtnTabPlaylists, false);
+            // Restore the "All tracks" highlight if we're back to the library view
+            if (_currentPlaylistId == null) SetTabActive(BtnTabAll, true);
+        }
     }
 
     /// <summary>Double-click a playlist → play it immediately.</summary>
@@ -256,9 +323,113 @@ public partial class MainWindow
         }
     }
 
+    // ── Action helpers used by the Playlists page cards (right-click menu) ────
+    // Each helper looks up the playlist by id, performs the action, and refreshes
+    // the cards grid so the user sees the change without leaving the page.
+    private (long Id, string Name)? FindPlaylistById(long id)
+    {
+        var p = _storage.LoadPlaylists().FirstOrDefault(x => x.Id == id);
+        return p == null ? null : (p.Id, p.Name);
+    }
+
+    private void RenamePlaylistById(long id)
+    {
+        if (FindPlaylistById(id) is not (long pid, string oldName)) return;
+        InputOverlay.Show(Localization.T("RenamePlaylistTitle"), Localization.T("PlaylistNamePh"), oldName, name =>
+        {
+            if (string.IsNullOrWhiteSpace(name)) return;
+            _storage.RenamePlaylist(pid, name.Trim());
+            if (_currentPlaylistId == pid) TxtCollectionName.Text = name.Trim();
+            RefreshPlaylistsUi();
+            RefreshPlaylistsPageCards();
+        });
+    }
+
+    private void DeletePlaylistById(long id)
+    {
+        if (FindPlaylistById(id) is not (long pid, string name)) return;
+        ConfirmOverlay.Show(
+            Localization.T("ConfirmDeletePlaylistTitle"),
+            string.Format(Localization.T("ConfirmDeletePlaylistMsg"), name),
+            Localization.T("PlaylistDelete"),
+            ok =>
+            {
+                if (!ok) return;
+                _storage.DeletePlaylist(pid);
+                if (_currentPlaylistId == pid) ShowAllTracks();
+                RefreshPlaylistsUi();
+                RefreshPlaylistsPageCards();
+            });
+    }
+
+    private void ExportPlaylistById(long id)
+    {
+        if (FindPlaylistById(id) is not (long pid, string name)) return;
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = Localization.T("PlaylistExport"),
+            FileName = FileManager.Sanitize(name) + ".m3u8",
+            Filter = "Playlist (*.m3u8;*.m3u)|*.m3u8;*.m3u|All files (*.*)|*.*",
+            DefaultExt = ".m3u8",
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var lines = new List<string> { "#EXTM3U" };
+            lines.AddRange(_storage.LoadPlaylistPaths(pid));
+            File.WriteAllLines(dlg.FileName, lines, System.Text.Encoding.UTF8);
+            ToastView.Show(string.Format(Localization.T("ToastPlaylistExported"), name));
+        }
+        catch (Exception ex) { Log.Error("m3u export failed", ex); ToastView.Show(Localization.T("ToastExportFailed")); }
+    }
+
+    private void MergePlaylistsById(long sourceId, long targetId)
+    {
+        if (FindPlaylistById(targetId) is not (long _, string targetName)) return;
+        MergePlaylists(sourceId, targetId, targetName);
+    }
+
+    /// <summary>Open the "add tracks" picker for a playlist without navigating away
+    /// from the Playlists page — temporarily sets the current playlist id, opens the
+    /// existing picker, and refreshes the page when the picker closes.</summary>
+    private void AddTracksToPlaylistById(long id)
+    {
+        if (FindPlaylistById(id) is not (long pid, string name)) return;
+        // Re-use the existing in-playlist picker by temporarily pointing _currentPlaylistId at it.
+        // The picker only reads _currentPlaylistId via OnPlaylistToggleTrack; no other side effects.
+        var prev = _currentPlaylistId;
+        _currentPlaylistId = pid;
+        if (!_playlistAddWired)
+        {
+            PlaylistAddOverlay.Closed += () => PlaylistAddOverlay.AnimateOut(() => PlaylistAddOverlay.Visibility = Visibility.Collapsed);
+            PlaylistAddOverlay.ToggleTrack += OnPlaylistToggleTrack;
+            _playlistAddWired = true;
+        }
+        var inSet = new HashSet<string>(_storage.LoadPlaylistPaths(pid), StringComparer.OrdinalIgnoreCase);
+        var items = _allTracks.Select(t => new PlaylistAddView.PickItem
+        {
+            Path = t.Path, Title = t.Title, Artist = t.Artist, Cover = t.Cover,
+            InPlaylist = inSet.Contains(t.Path),
+        });
+        PlaylistAddOverlay.SetItems(name, items);
+        PlaylistAddOverlay.Visibility = Visibility.Visible;
+        PlaylistAddOverlay.AnimateIn();
+        // Hook a one-shot Closed handler that restores the previous current id and refreshes cards.
+        Action? onClose = null;
+        onClose = () =>
+        {
+            _currentPlaylistId = prev;
+            RefreshPlaylistsUi();
+            RefreshPlaylistsPageCards();
+            if (onClose != null) PlaylistAddOverlay.Closed -= onClose;
+        };
+        PlaylistAddOverlay.Closed += onClose;
+    }
+
     /// <summary>Switch the main view to a playlist.</summary>
     private void SelectPlaylist(PlaylistVm vm)
     {
+        if (_playlistsPageOpen) TogglePlaylistsPage(false);
         _currentPlaylistId = vm.Id;
         TxtCollectionName.Text = vm.Name;
         PlaylistCoverHost.Visibility = Visibility.Visible;
@@ -287,6 +458,7 @@ public partial class MainWindow
     /// <summary>Switch the main view back to the whole library.</summary>
     private void ShowAllTracks()
     {
+        if (_playlistsPageOpen) TogglePlaylistsPage(false);
         _currentPlaylistId = null;
         TxtCollectionName.Text = Localization.T("MyCollection");
         PlaylistCoverHost.Visibility = Visibility.Collapsed;

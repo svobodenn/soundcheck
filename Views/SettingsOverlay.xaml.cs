@@ -96,6 +96,16 @@ public partial class SettingsOverlay : UserControl
         foreach (RadioButton rb in GrpCrossfade.Children)
             rb.Checked += (_, _) => Push(() => { if (rb.Tag is string t && int.TryParse(t, out var n)) AppSettings.CrossfadeSeconds = n; });
 
+        // Visual preset chips — apply a bundle of UI toggles in one click, then refresh
+        // the toggles below so the user sees what just changed.
+        foreach (RadioButton rb in GrpPreset.Children)
+            rb.Checked += (_, _) => Push(() =>
+            {
+                if (rb.Tag is not string tag) return;
+                AppSettings.ApplyVisualPreset(tag);
+                Reload();
+            });
+
         BuildEqBands();
         ChkEq.Checked   += (_, _) => Push(() => { UpdateEqPanelState(); RaiseEq(); });
         ChkEq.Unchecked += (_, _) => Push(() => { UpdateEqPanelState(); RaiseEq(); });
@@ -140,6 +150,7 @@ public partial class SettingsOverlay : UserControl
             ChkLogoEq.IsChecked      = AppSettings.LogoEqualizerEnabled;
             ChkBlurBg.IsChecked      = AppSettings.BlurBgEnabled;
             ChkReduceMotion.IsChecked = AppSettings.ReduceMotion;
+            SelectChipString(GrpPreset, AppSettings.CurrentVisualPreset);
             ChkAccentCover.IsChecked = AppSettings.AccentFromCover;
             SelectAccent(AppSettings.AccentColor);
             UpdateAccentPaletteState();

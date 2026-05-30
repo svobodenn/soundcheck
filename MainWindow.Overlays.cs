@@ -58,8 +58,9 @@ public partial class MainWindow
     private void UpdateNowPlaying()
     {
         if (_current == null) return;
-        var fullCover = _current.CoverBytes != null ? Library.LoadFullCover(_current.CoverBytes, 600) : null;
-        var bg = _current.CoverBytes != null ? Library.LoadFullCover(_current.CoverBytes, 250) : null;
+        var npCover = CoverBytesFor(_current);
+        var fullCover = npCover != null ? Library.LoadFullCover(npCover, 600) : null;
+        var bg = npCover != null ? Library.LoadFullCover(npCover, 250) : null;
         NowPlayingOverlay.UpdateMeta(_current.Title,
             string.IsNullOrEmpty(_current.Album) ? _current.Artist : $"{_current.Artist} · {_current.Album}",
             fullCover, bg, _current.Duration);

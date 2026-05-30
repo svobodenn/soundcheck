@@ -1,0 +1,163 @@
+<UserControl x:Class="SoundCheck.Views.PlaylistsPageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:SoundCheck.Helpers"
+             xmlns:local="clr-namespace:SoundCheck.Views"
+             Background="{StaticResource Bg}"
+             Opacity="0"
+             RenderTransformOrigin="0.5,0.5">
+    <UserControl.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform x:Name="StScale" ScaleX="0.99" ScaleY="0.99"/>
+            <TranslateTransform x:Name="StTrans" Y="14"/>
+        </TransformGroup>
+    </UserControl.RenderTransform>
+
+    <UserControl.Resources>
+        <!-- Normal playlist card -->
+        <DataTemplate x:Key="PlaylistCardTpl">
+            <Button Click="Card_Click" Tag="{Binding}" Cursor="Hand" Width="158" Margin="8"
+                    ContextMenuOpening="CardMenu_Opening">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Tag="play"    Header="{DynamicResource L_PlaylistPlay}"      Click="CardMenuItem_Click" DataContext="{Binding}"/>
+                        <MenuItem Tag="shuffle" Header="{DynamicResource L_PlaylistShuffle}"   Click="CardMenuItem_Click" DataContext="{Binding}"/>
+                        <Separator/>
+                        <MenuItem Tag="open"    Header="{DynamicResource L_PlaylistOpen}"      Click="CardMenuItem_Click" DataContext="{Binding}"/>
+                        <MenuItem Tag="add"     Header="{DynamicResource L_PlaylistAddTracks}" Click="CardMenuItem_Click" DataContext="{Binding}"/>
+                        <MenuItem Tag="rename"  Header="{DynamicResource L_PlaylistRename}"    Click="CardMenuItem_Click" DataContext="{Binding}"/>
+                        <!-- "Merge with…" submenu is filled by code-behind in CardMenu_Opening -->
+                        <MenuItem Tag="merge-host" Header="{DynamicResource L_PlaylistMerge}"/>
+                        <MenuItem Tag="export"  Header="{DynamicResource L_PlaylistExport}"    Click="CardMenuItem_Click" DataContext="{Binding}"/>
+                        <Separator/>
+                        <MenuItem Tag="delete"  Header="{DynamicResource L_PlaylistDelete}"    Click="CardMenuItem_Click" DataContext="{Binding}"/>
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="10" Padding="11">
+                            <StackPanel>
+                                <Border Width="134" Height="134" CornerRadius="8" ClipToBounds="True"
+                                        Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1">
+                                    <Grid>
+                                        <Path Data="M3,5 L15,5 M3,9 L15,9 M3,13 L11,13" Stroke="{StaticResource T3}" StrokeThickness="1.5" Width="34" Height="34" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource T1}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="2,10,2,0"/>
+                                <TextBlock Foreground="{StaticResource T3}" FontSize="11" Margin="2,2,2,0">
+                                    <Run Text="{Binding Count, Mode=OneWay}"/><Run Text="{DynamicResource L_TracksWord}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S2}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentDim}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </DataTemplate>
+
+        <!-- Trailing "+" tile — creates a new playlist, stays on this page -->
+        <DataTemplate x:Key="PlaylistAddTpl">
+            <Button Click="AddCard_Click" Cursor="Hand" Width="158" Margin="8"
+                    ToolTip="{DynamicResource L_NewPlaylistShort}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="Transparent" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="10" Padding="11">
+                            <StackPanel>
+                                <Border Width="134" Height="134" CornerRadius="8"
+                                        Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1">
+                                    <Path x:Name="plus" Data="M9,3 L9,15 M3,9 L15,9" Stroke="{StaticResource T3}" StrokeThickness="1.6"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Width="30" Height="30" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{DynamicResource L_NewPlaylistShort}" Foreground="{StaticResource T2}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="2,10,2,0"/>
+                                <TextBlock Text=" " Foreground="{StaticResource T3}" FontSize="11" Margin="2,2,2,0"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentDim}"/>
+                                <Setter TargetName="plus" Property="Stroke" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </DataTemplate>
+
+        <local:PlaylistCardTemplateSelector x:Key="PlaylistTplSelector"
+                                            CardTemplate="{StaticResource PlaylistCardTpl}"
+                                            AddTemplate="{StaticResource PlaylistAddTpl}"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER — top padding reserves strip for window chrome buttons -->
+        <Border Grid.Row="0" Padding="32,38,24,18" BorderBrush="{StaticResource B1}" BorderThickness="0,0,0,1" ClipToBounds="True">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#08C8A96E" Offset="0"/>
+                    <GradientStop Color="#00C8A96E" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid>
+                <Grid>
+                    <Border Background="{DynamicResource Accent}" Width="3" Height="40" HorizontalAlignment="Left" CornerRadius="2"/>
+                    <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <Ellipse Width="4" Height="4" Fill="{DynamicResource Accent}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                            <TextBlock Text="{DynamicResource L_LibraryHeader}" Foreground="{DynamicResource Accent}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource L_PlaylistsPageTitle}" Foreground="{StaticResource T1}" FontSize="24" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="TxtSubtitle" Foreground="{StaticResource T2}" FontSize="11" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="BtnNew" Click="BtnNew_Click" Cursor="Hand" Margin="0,0,8,0" Foreground="{DynamicResource Accent}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="#1FC8A96E" BorderBrush="{DynamicResource AccentDim}" BorderThickness="1" CornerRadius="7" Padding="13,7">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="M9,3 L9,15 M3,9 L15,9" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" Stretch="Uniform" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_NewPlaylistShort}" Foreground="{TemplateBinding Foreground}" FontSize="11" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#33C8A96E"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button x:Name="BtnClose" Style="{StaticResource PillButton}" Content="{DynamicResource L_BtnCloseShort}"
+                            Foreground="{StaticResource T3}" Padding="14,7" FontSize="12" FontWeight="Bold" Click="BtnClose_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- CARDS -->
+        <Grid Grid.Row="1">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" helpers:SmoothScroll.Enabled="True" Padding="24,20">
+                <ItemsControl x:Name="CardsHost" ItemTemplateSelector="{StaticResource PlaylistTplSelector}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+            <StackPanel x:Name="TxtEmpty" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Opacity="0.9">
+                <Path Width="40" Height="40" Stretch="Uniform" Data="M3,5 L15,5 M3,9 L15,9 M3,13 L11,13" Stroke="{StaticResource T2}" StrokeThickness="1.2" Opacity="0.85" HorizontalAlignment="Center"/>
+                <TextBlock Text="{DynamicResource L_NoPlaylists}" Foreground="{StaticResource T2}" FontSize="12" Margin="0,14,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

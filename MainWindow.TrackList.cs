@@ -64,7 +64,7 @@ public partial class MainWindow
     /// <summary>Open the tag editor for a track and persist edits to the file + library on save.</summary>
     private void OpenTagEditor(Track t)
     {
-        TagEditorOverlay.Show(Path.GetFileName(t.Path), t.Title, t.Artist, t.Album, t.CoverBytes, t.IsExplicit, result =>
+        TagEditorOverlay.Show(Path.GetFileName(t.Path), t.Title, t.Artist, t.Album, CoverBytesFor(t), t.IsExplicit, result =>
         {
             if (result == null) return; // cancelled
             ApplyTagEdit(t, result);
@@ -80,7 +80,7 @@ public partial class MainWindow
         byte[]? cover;
         if (track != null)
         {
-            title = track.Title; artist = track.Artist; album = track.Album; cover = track.CoverBytes;
+            title = track.Title; artist = track.Artist; album = track.Album; cover = CoverBytesFor(track);
         }
         else
         {
@@ -130,10 +130,11 @@ public partial class MainWindow
             t.Album = r.Album;
             if (r.CoverChanged)
             {
-                t.CoverBytes = r.CoverBytes;
                 t.Cover = Services.Library.LoadThumb(r.CoverBytes, 80);
+                t.HasCover = r.CoverBytes != null;
                 _storage.UpdateTrackCover(t.Path, r.CoverBytes);
-                if (_current == t) { ApplyAccentFromCover(t.CoverBytes); UpdateBlurBg(t.CoverBytes); }
+                if (_current == t) { ApplyAccentFromCover(r.CoverBytes); UpdateBlurBg(r.CoverBytes); }
+                t.CoverBytes = null; // cover lives in SQLite now — don't pin it in RAM
             }
             t.IsExplicit = r.IsExplicit;
             _storage.UpdateTrackMeta(t.Path, title, r.Artist, r.Album);

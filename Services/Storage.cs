@@ -119,11 +119,32 @@ public class Storage : IDisposable
         TryExec("ALTER TABLE playlists ADD COLUMN cover_blob BLOB");
     }
 
+    private bool _closed; // set when the connection is intentionally closed (delete/import + restart)
+
+    /// <summary>Make sure the SQLite connection is open before a query. If something
+    /// closed it during a long session, transparently reopen — prevents the
+    /// "ExecuteNonQuery can only be called when the connection is open" crash.</summary>
+    private void EnsureOpen()
+    {
+        if (_closed) return;
+        if (_conn.State != System.Data.ConnectionState.Open)
+        {
+            try { _conn.Open(); } catch { }
+        }
+    }
+
+    /// <summary>Create a command, ensuring the connection is open first.</summary>
+    private SqliteCommand Cmd()
+    {
+        EnsureOpen();
+        return _conn.CreateCommand();
+    }
+
     private void TryExec(string sql)
     {
         try
         {
-            using var cmd = _conn.CreateCommand();
+            using var cmd = Cmd();
             cmd.CommandText = sql;
             cmd.ExecuteNonQuery();
         }
@@ -132,10 +153,15 @@ public class Storage : IDisposable
 
     private void Exec(string sql)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = sql;
         cmd.ExecuteNonQuery();
     }
+
+    /// <summary>Wipe all library data (tracks, playlists, history, stats) in place,
+    /// keeping the connection open and user settings intact. No restart needed.</summary>
+    public void WipeLibrary()
+        => Exec("DELETE FROM tracks; DELETE FROM playlist_tracks; DELETE FROM playlists; DELETE FROM history; DELETE FROM stats;");
 
     private static long TsNow() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
@@ -143,7 +169,7 @@ public class Storage : IDisposable
     public List<StoredTrack> LoadTracks()
     {
         var out_ = new List<StoredTrack>();
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "SELECT path, title, artist, album, duration_secs, cover_blob, explicit FROM tracks ORDER BY added_at";
         using var r = cmd.ExecuteReader();
         while (r.Read())
@@ -166,9 +192,22 @@ public class Storage : IDisposable
         return out_;
     }
 
+    /// <summary>Fetch a single track's full cover blob on demand. Returns null if the
+    /// track has no art. Used so the library doesn't pin every cover in RAM —
+    /// callers load the bytes only when they actually need full-size art.</summary>
+    public byte[]? GetTrackCover(string path)
+    {
+        using var cmd = Cmd();
+        cmd.CommandText = "SELECT cover_blob FROM tracks WHERE path = $p";
+        cmd.Parameters.AddWithValue("$p", path);
+        using var r = cmd.ExecuteReader();
+        if (r.Read() && !r.IsDBNull(0)) return (byte[])r["cover_blob"];
+        return null;
+    }
+
     public void SaveTrack(Track t)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = @"INSERT OR IGNORE INTO tracks
             (path, title, artist, album, duration_secs, added_at, cover_blob, explicit)
             VALUES ($p, $ti, $ar, $al, $d, $ts, $c, $e)";
@@ -186,7 +225,7 @@ public class Storage : IDisposable
     /// <summary>Set the explicit flag for a track.</summary>
     public void UpdateTrackExplicit(string path, bool isExplicit)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "UPDATE tracks SET explicit = $e WHERE path = $p";
         cmd.Parameters.AddWithValue("$e", isExplicit ? 1 : 0);
         cmd.Parameters.AddWithValue("$p", path);
@@ -195,7 +234,7 @@ public class Storage : IDisposable
 
     public void DeleteTrack(string path)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "DELETE FROM tracks WHERE path = $p; DELETE FROM playlist_tracks WHERE path = $p;";
         cmd.Parameters.AddWithValue("$p", path);
         cmd.ExecuteNonQuery();
@@ -204,7 +243,7 @@ public class Storage : IDisposable
     /// <summary>Update a track's file path after the file was renamed/moved on disk.</summary>
     public void UpdateTrackPath(string oldPath, string newPath)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "UPDATE OR IGNORE tracks SET path = $new WHERE path = $old; " +
                           "UPDATE OR IGNORE playlist_tracks SET path = $new WHERE path = $old;";
         cmd.Parameters.AddWithValue("$new", newPath);
@@ -215,7 +254,7 @@ public class Storage : IDisposable
     /// <summary>Rename a track's display title (library entry only — file tags untouched).</summary>
     public void UpdateTrackTitle(string path, string title)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "UPDATE tracks SET title = $t WHERE path = $p";
         cmd.Parameters.AddWithValue("$t", title);
         cmd.Parameters.AddWithValue("$p", path);
@@ -225,7 +264,7 @@ public class Storage : IDisposable
     /// <summary>Update a track's title/artist/album in the library after editing its file tags.</summary>
     public void UpdateTrackMeta(string path, string title, string artist, string album)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "UPDATE tracks SET title = $t, artist = $ar, album = $al WHERE path = $p";
         cmd.Parameters.AddWithValue("$t", title);
         cmd.Parameters.AddWithValue("$ar", artist);
@@ -237,7 +276,7 @@ public class Storage : IDisposable
     /// <summary>Update a track's cached cover art blob (null clears it).</summary>
     public void UpdateTrackCover(string path, byte[]? cover)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "UPDATE tracks SET cover_blob = $c WHERE path = $p";
         cmd.Parameters.AddWithValue("$c", (object?)cover ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$p", path);
@@ -252,7 +291,7 @@ public class Storage : IDisposable
     public List<PlaylistInfo> LoadPlaylists()
     {
         var list = new List<PlaylistInfo>();
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = @"SELECT p.id, p.name, COUNT(pt.path), p.cover_blob
                             FROM playlists p
                             LEFT JOIN playlist_tracks pt ON pt.playlist_id = p.id
@@ -269,7 +308,7 @@ public class Storage : IDisposable
 
     public void UpdatePlaylistCover(long id, byte[]? cover)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "UPDATE playlists SET cover_blob = $c WHERE id = $id";
         cmd.Parameters.AddWithValue("$c", (object?)cover ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$id", id);
@@ -278,7 +317,7 @@ public class Storage : IDisposable
 
     public long CreatePlaylist(string name)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "INSERT INTO playlists (name, created_at) VALUES ($n, $ts); SELECT last_insert_rowid();";
         cmd.Parameters.AddWithValue("$n", name);
         cmd.Parameters.AddWithValue("$ts", TsNow());
@@ -287,7 +326,7 @@ public class Storage : IDisposable
 
     public void RenamePlaylist(long id, string name)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "UPDATE playlists SET name = $n WHERE id = $id";
         cmd.Parameters.AddWithValue("$n", name);
         cmd.Parameters.AddWithValue("$id", id);
@@ -296,7 +335,7 @@ public class Storage : IDisposable
 
     public void DeletePlaylist(long id)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "DELETE FROM playlist_tracks WHERE playlist_id = $id; DELETE FROM playlists WHERE id = $id;";
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
@@ -305,7 +344,7 @@ public class Storage : IDisposable
     /// <summary>Append a track to a playlist. Returns false if it was already present.</summary>
     public bool AddToPlaylist(long id, string path)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = @"INSERT OR IGNORE INTO playlist_tracks (playlist_id, path, position)
                             VALUES ($id, $p, COALESCE((SELECT MAX(position)+1 FROM playlist_tracks WHERE playlist_id = $id), 0))";
         cmd.Parameters.AddWithValue("$id", id);
@@ -315,7 +354,7 @@ public class Storage : IDisposable
 
     public void RemoveFromPlaylist(long id, string path)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "DELETE FROM playlist_tracks WHERE playlist_id = $id AND path = $p";
         cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$p", path);
@@ -325,8 +364,9 @@ public class Storage : IDisposable
     /// <summary>Persist a new track order for a playlist (positions 0..n in the given order).</summary>
     public void ReorderPlaylist(long id, List<string> orderedPaths)
     {
+        EnsureOpen();
         using var tx = _conn.BeginTransaction();
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.Transaction = tx;
         cmd.CommandText = "UPDATE playlist_tracks SET position = $pos WHERE playlist_id = $id AND path = $p";
         var pPos = cmd.CreateParameter(); pPos.ParameterName = "$pos"; cmd.Parameters.Add(pPos);
@@ -344,7 +384,7 @@ public class Storage : IDisposable
     public List<string> LoadPlaylistPaths(long id)
     {
         var list = new List<string>();
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "SELECT path FROM playlist_tracks WHERE playlist_id = $id ORDER BY position";
         cmd.Parameters.AddWithValue("$id", id);
         using var r = cmd.ExecuteReader();
@@ -368,6 +408,7 @@ public class Storage : IDisposable
     /// The instance is unusable afterwards — caller restarts the app.</summary>
     public void CloseConnection()
     {
+        _closed = true; // intentional — don't auto-reopen
         try { _conn.Close(); } catch { }
         try { _conn.Dispose(); } catch { }
         // Microsoft.Data.Sqlite pools connections; clearing pools releases the OS file handle.
@@ -378,13 +419,13 @@ public class Storage : IDisposable
     public void PushHistory(Track t)
     {
         // HTML pushHist: dedupe (drop prior entries for same track), then push to top
-        using (var cmd = _conn.CreateCommand())
+        using (var cmd = Cmd())
         {
             cmd.CommandText = "DELETE FROM history WHERE track_path = $p";
             cmd.Parameters.AddWithValue("$p", t.Path);
             cmd.ExecuteNonQuery();
         }
-        using (var cmd = _conn.CreateCommand())
+        using (var cmd = Cmd())
         {
             cmd.CommandText = @"INSERT INTO history (track_path, title, artist, played_at)
                 VALUES ($p, $ti, $ar, $ts)";
@@ -395,14 +436,14 @@ public class Storage : IDisposable
             cmd.ExecuteNonQuery();
         }
         // Trim to last 40
-        using (var cmd = _conn.CreateCommand())
+        using (var cmd = Cmd())
         {
             cmd.CommandText = @"DELETE FROM history WHERE id NOT IN
                 (SELECT id FROM history ORDER BY played_at DESC LIMIT 40)";
             cmd.ExecuteNonQuery();
         }
         // Increment stats
-        using (var cmd = _conn.CreateCommand())
+        using (var cmd = Cmd())
         {
             cmd.CommandText = @"INSERT INTO stats (track_path, title, artist, plays)
                 VALUES ($p, $ti, $ar, 1)
@@ -420,7 +461,7 @@ public class Storage : IDisposable
     public List<HistoryEntry> LoadHistory(int limit = 10)
     {
         var out_ = new List<HistoryEntry>();
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "SELECT title, artist, played_at FROM history ORDER BY played_at DESC LIMIT $l";
         cmd.Parameters.AddWithValue("$l", limit);
         using var r = cmd.ExecuteReader();
@@ -439,7 +480,7 @@ public class Storage : IDisposable
     public List<TopTrack> LoadTopTracks(int limit = 5)
     {
         var out_ = new List<TopTrack>();
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = @"SELECT title, artist, plays FROM stats
             WHERE plays > 0 ORDER BY plays DESC LIMIT $l";
         cmd.Parameters.AddWithValue("$l", limit);
@@ -458,7 +499,7 @@ public class Storage : IDisposable
 
     public long TotalPlays()
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "SELECT COALESCE(SUM(plays), 0) FROM stats";
         var r = cmd.ExecuteScalar();
         return r is long l ? l : 0;
@@ -467,7 +508,7 @@ public class Storage : IDisposable
     // HTML: const arts = Object.entries(ST.artistPlays).sort(...); arts[0]?.[0]
     public string TopArtist()
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = @"SELECT artist, SUM(plays) AS total FROM stats
             WHERE artist <> '' AND artist <> 'Unknown Artist'
             GROUP BY artist ORDER BY total DESC LIMIT 1";
@@ -487,7 +528,7 @@ public class Storage : IDisposable
     public List<(string Artist, long Plays)> LoadTopArtists(int limit = 5)
     {
         var list = new List<(string, long)>();
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = @"SELECT artist, SUM(plays) AS total FROM stats
             WHERE artist <> '' AND artist <> 'Unknown Artist'
             GROUP BY artist ORDER BY total DESC LIMIT $l";
@@ -504,7 +545,7 @@ public class Storage : IDisposable
         var result = new int[days];
         long now = TsNow();
         // Bucket history by floor(daysAgo)
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "SELECT played_at FROM history WHERE played_at >= $since";
         long since = now - (days * 86400L);
         cmd.Parameters.AddWithValue("$since", since);
@@ -522,7 +563,7 @@ public class Storage : IDisposable
     public int[] LoadPlaysPerHour()
     {
         var result = new int[24];
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "SELECT played_at FROM history";
         using var r = cmd.ExecuteReader();
         while (r.Read())
@@ -538,7 +579,7 @@ public class Storage : IDisposable
     // ── Settings ──
     public string? GetSetting(string key)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = "SELECT value FROM settings WHERE key = $k";
         cmd.Parameters.AddWithValue("$k", key);
         var r = cmd.ExecuteScalar();
@@ -547,7 +588,7 @@ public class Storage : IDisposable
 
     public void SetSetting(string key, string value)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Cmd();
         cmd.CommandText = @"INSERT OR REPLACE INTO settings (key, value) VALUES ($k, $v)";
         cmd.Parameters.AddWithValue("$k", key);
         cmd.Parameters.AddWithValue("$v", value);

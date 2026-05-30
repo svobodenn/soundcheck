@@ -15,6 +15,10 @@ public class Track : INotifyPropertyChanged
     public BitmapImage? Cover { get; set; }
     public byte[]? CoverBytes { get; set; }
 
+    /// <summary>True when this track has cover art stored in the library.
+    /// The full bytes are loaded on demand from SQLite rather than pinned in RAM.</summary>
+    public bool HasCover { get; set; }
+
     public string DurationStr =>
         Duration.TotalSeconds <= 0 ? "0:00"
             : Duration.TotalHours >= 1

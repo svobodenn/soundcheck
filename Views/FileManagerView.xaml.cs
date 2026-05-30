@@ -55,6 +55,14 @@ public partial class FileManagerView : UserControl
         private bool _sel;
         public bool IsSelected { get => _sel; set { if (_sel != value) { _sel = value; OnPC(nameof(IsSelected)); } } }
 
+        // Inline single-file rename: when on, the row shows an editable text box.
+        private bool _editing;
+        public bool IsEditing { get => _editing; set { _editing = value; OnPC(nameof(IsEditing)); OnPC(nameof(NotEditing)); } }
+        public bool NotEditing => !_editing;
+
+        private string _editName = "";
+        public string EditName { get => _editName; set { _editName = value; OnPC(nameof(EditName)); } }
+
         private void Refresh() { OnPC(nameof(Display)); OnPC(nameof(Highlight)); }
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPC(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -265,6 +273,78 @@ public partial class FileManagerView : UserControl
         if (sender is FrameworkElement fe && fe.DataContext is FileVM vm)
             EditTagsRequested?.Invoke(vm.Item.FullPath);
         e.Handled = true;
+    }
+
+    // ─── Inline single-file rename (rename the file itself, not its tags) ──
+    /// <summary>Pencil button on a row → switch that row into an editable text box.</summary>
+    private void RenameFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is FileVM vm)
+        {
+            // Cancel any other in-progress edit so only one row is editable at a time.
+            foreach (var other in _allVMs) if (other != vm) other.IsEditing = false;
+            vm.EditName = vm.Item.FileName;
+            vm.IsEditing = true;
+        }
+        e.Handled = true;
+    }
+
+    /// <summary>Focus the box and pre-select the stem (extension stays put) when it becomes visible.</summary>
+    private void RenameBox_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is not TextBox tb || !tb.IsVisible) return;
+        // Defer so focus lands after the layout pass that made the box visible.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
+        {
+            tb.Focus();
+            int dot = tb.Text.LastIndexOf('.');
+            if (dot > 0) tb.Select(0, dot); else tb.SelectAll();
+        }));
+    }
+
+    private void RenameBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox tb || tb.DataContext is not FileVM vm) return;
+        if (e.Key == Key.Enter)       { CommitInlineRename(vm, tb.Text); e.Handled = true; }
+        else if (e.Key == Key.Escape) { vm.IsEditing = false;            e.Handled = true; }
+    }
+
+    private void RenameBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox tb && tb.DataContext is FileVM vm && vm.IsEditing)
+            CommitInlineRename(vm, tb.Text);
+    }
+
+    private void CommitInlineRename(FileVM vm, string typed)
+    {
+        vm.IsEditing = false;
+        typed = (typed ?? "").Trim();
+        if (string.IsNullOrEmpty(typed)) return;
+
+        // If the user didn't include an extension, keep the original one.
+        if (string.IsNullOrEmpty(Path.GetExtension(typed))) typed += vm.Item.Ext;
+
+        // Sanitize the stem but preserve the extension verbatim.
+        string ext  = Path.GetExtension(typed);
+        string stem = Path.GetFileNameWithoutExtension(typed);
+        string newName = FileManager.Sanitize(stem) + ext;
+
+        if (string.Equals(newName, vm.Item.FileName, StringComparison.Ordinal)) return;
+
+        string oldPath = vm.Item.FullPath;
+        string? res = FileManager.Rename(oldPath, newName);
+        if (res != null)
+        {
+            vm.Item.FullPath = res;
+            vm.Item.FileName = Path.GetFileName(res);
+            vm.Proposed = vm.Item.FileName;
+            FilesRenamed?.Invoke(new List<(string, string)> { (oldPath, res) });
+            TxtStatus.Text = string.Format(Localization.T("FmRenamedFmt"), 1);
+        }
+        else
+        {
+            TxtStatus.Text = string.Format(Localization.T("FmRenameFailFmt"), 1);
+        }
     }
 
     // ─── Rename ───────────────────────────────────────────────────────────

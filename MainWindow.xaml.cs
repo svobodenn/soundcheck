@@ -49,6 +49,7 @@ public partial class MainWindow : Window
     private bool _isPrevNav;
     private bool _historyRecordedForCurrent;
     private bool _crossfadeArmed;   // true once crossfade-advance fired for the current track
+    private double _lastProgressPos = -1; // last position pushed to the slider/time label (skip redundant work)
     private bool _queueOpen;
     private bool _queueRestored;
     private bool _profileOpen;
@@ -67,6 +68,11 @@ public partial class MainWindow : Window
         TrackList.ItemsSource = _visible;
         AppSettings.Init(_storage);
         Localization.Init(AppSettings.Language);
+
+        // Version label is driven by the assembly version (csproj <Version>), so it
+        // never needs hand-editing — bump the version in one place and it follows.
+        var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        if (ver != null) TxtVersion.Text = $"v{ver.Major}.{ver.Minor}.{ver.Build}";
 
         // Floating bg gradient (bgFloat keyframes from HTML)
         var bgX = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromSeconds(18), RepeatBehavior = RepeatBehavior.Forever };
@@ -92,10 +98,14 @@ public partial class MainWindow : Window
 
         BuildLogoLettersWave();
 
-        // Load settings
-        if (float.TryParse(_storage.GetSetting("volume"), out var vol))
+        // Load settings — volume is saved with InvariantCulture, so we must parse with it too,
+        // otherwise on ru-RU locales "0.500" fails to parse (comma vs period) and the
+        // restored volume silently falls back to the default.
+        if (float.TryParse(_storage.GetSetting("volume"),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var vol))
         {
-            _audio.Volume = vol;
+            _audio.Volume = Math.Clamp(vol, 0f, 1f);
         }
         SldVolume.Value = _audio.Volume;
         _shuffle = _storage.GetSetting("shuffle") == "1";
@@ -118,8 +128,10 @@ public partial class MainWindow : Window
                 Artist = s.Artist,
                 Album = s.Album,
                 Duration = TimeSpan.FromSeconds(s.DurationSecs),
-                CoverBytes = s.CoverBlob,
+                // Build the small thumbnail now, but don't pin the full cover blob in RAM:
+                // it stays in SQLite and is fetched on demand (accent/blur/now-playing/tags).
                 Cover = Library.LoadThumb(s.CoverBlob, 80),
+                HasCover = s.CoverBlob != null,
                 IsMissing = !File.Exists(s.Path),
                 IsExplicit = s.Explicit,
             });
@@ -378,7 +390,12 @@ public partial class MainWindow : Window
         foreach (var t in loaded)
         {
             _allTracks.Add(t);
-            try { _storage.SaveTrack(t); added++; }
+            try
+            {
+                _storage.SaveTrack(t); added++;
+                // Cover is now safely in SQLite — drop the in-RAM copy (fetched on demand).
+                t.CoverBytes = null;
+            }
             catch (Exception ex) { Log.Error($"Save failed: {t.Path}", ex); }
         }
         try { RefreshVisible(); UpdateStats(); }
@@ -800,7 +817,8 @@ public partial class MainWindow : Window
             case Key.Right: BtnNext_Click(this, new RoutedEventArgs()); e.Handled = true; break;
             // Esc still closes the active overlay (UI navigation, not a media key).
             case Key.Escape:
-                if (_logOpen) ToggleLog(false);
+                if (_playlistsPageOpen) TogglePlaylistsPage(false);
+                else if (_logOpen) ToggleLog(false);
                 else if (_fileMgrOpen) ToggleFileManager(false);
                 else if (_settingsOpen) ToggleSettings(false);
                 else if (_helpOpen) ToggleHelp(false);

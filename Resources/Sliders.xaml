@@ -75,6 +75,9 @@
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="MinHeight" Value="22"/>
+        <!-- Fill colour follows Foreground so an individual slider can opt out of
+             the accent (default Accent → volume sliders stay gold). -->
+        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
         <Setter Property="h:SliderBehavior.ClickToSeek" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -82,7 +85,7 @@
                     <Grid x:Name="root" Height="22" Background="Transparent">
                         <Border x:Name="TrackBg" Background="{StaticResource S3}"
                                 Height="4" CornerRadius="2" VerticalAlignment="Center"/>
-                        <Border x:Name="Fill" Background="{DynamicResource Accent}"
+                        <Border x:Name="Fill" Background="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}"
                                 Height="4" CornerRadius="2"
                                 HorizontalAlignment="Left" VerticalAlignment="Center"
                                 IsHitTestVisible="False">

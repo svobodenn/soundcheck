@@ -17,8 +17,11 @@ public partial class MainWindow
         _tray.Prev      += () => Dispatcher.Invoke(() => BtnPrev_Click(this, new RoutedEventArgs()));
         _tray.Next      += () => Dispatcher.Invoke(() => BtnNext_Click(this, new RoutedEventArgs()));
         _tray.Quit      += () => Dispatcher.Invoke(QuitApplication);
+        _tray.ShuffleToggle += () => Dispatcher.Invoke(() => BtnShuffle_Click(this, new RoutedEventArgs()));
+        _tray.RepeatToggle  += () => Dispatcher.Invoke(() => BtnRepeat_Click(this, new RoutedEventArgs()));
         _tray.VolumeChanged += v => Dispatcher.Invoke(() => SldVolume.Value = v);
         _tray.UpdateVolume(_audio.Volume);
+        _tray.UpdateModes(_shuffle, _repeat == RepeatMode.One);
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -62,6 +65,30 @@ public partial class MainWindow
         Topmost = true; Topmost = false; // bring to foreground
         Focus();
         ResumeAmbient(); // restore animations now that the window is visible again
+        ForceRepaint();  // layered window can return black after a long hide — repaint it
+    }
+
+    /// <summary>
+    /// WPF layered windows (AllowsTransparency=True) can come back with a stale or
+    /// fully-black surface after sitting hidden in the tray for a long time — the
+    /// DWM/GPU reclaims the composition surface while we're invisible. Nudging the
+    /// root border's margin by one pixel across two layout passes forces WPF to
+    /// re-render the whole scene to a fresh surface, which clears the black frame.
+    /// Using the margin (not the window size) makes the nudge work in every window
+    /// state — including maximized — and it is invisible to the user.
+    /// </summary>
+    private void ForceRepaint()
+    {
+        WindowRoot.InvalidateVisual();
+        var original = WindowRoot.Margin;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            try { WindowRoot.Margin = new Thickness(original.Left, original.Top, original.Right, original.Bottom + 1); } catch { }
+        }));
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            try { WindowRoot.Margin = original; } catch { }
+        }));
     }
 
     private void QuitApplication()

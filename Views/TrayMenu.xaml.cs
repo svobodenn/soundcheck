@@ -21,9 +21,24 @@ public partial class TrayMenu : Window
     public event Action? Next;
     public event Action? ShowApp;
     public event Action? Quit;
+    public event Action? ShuffleToggle;
+    public event Action? RepeatToggle;
     public event Action<double>? VolumeChanged;
 
     public TrayMenu() { InitializeComponent(); }
+
+    /// <summary>Highlight the shuffle button when active (accent) or dim (T2).</summary>
+    public void SetShuffle(bool on) => SetIconActive(BtnShuffle, on);
+    /// <summary>Highlight the repeat button when active (accent) or dim (T2).</summary>
+    public void SetRepeat(bool on) => SetIconActive(BtnRepeat, on);
+
+    private void SetIconActive(Button btn, bool on)
+    {
+        if (btn?.Template?.FindName("ic", btn) is Path p)
+            p.Stroke = on
+                ? (Brush)Application.Current.Resources["Accent"]
+                : (Brush)FindResource("T2");
+    }
 
     private bool _volSuppress;
     /// <summary>Set the volume slider without re-raising <see cref="VolumeChanged"/>.</summary>
@@ -151,6 +166,8 @@ public partial class TrayMenu : Window
     private void BtnPlay_Click(object sender, RoutedEventArgs e) => PlayPause?.Invoke();
     private void BtnPrev_Click(object sender, RoutedEventArgs e) => Prev?.Invoke();
     private void BtnNext_Click(object sender, RoutedEventArgs e) => Next?.Invoke();
+    private void BtnShuffle_Click(object sender, RoutedEventArgs e) => ShuffleToggle?.Invoke();
+    private void BtnRepeat_Click(object sender, RoutedEventArgs e) => RepeatToggle?.Invoke();
 
     // Navigational actions — naturally close the menu.
     private void BtnShow_Click(object sender, RoutedEventArgs e) { ShowApp?.Invoke(); CloseFade(); }

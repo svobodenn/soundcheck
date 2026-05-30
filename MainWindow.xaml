@@ -219,10 +219,22 @@
 
                     <!-- PLAYLISTS LABEL + NEW -->
                     <Grid Grid.Row="4" Margin="20,18,16,6">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                            <Ellipse Width="3" Height="3" Fill="{DynamicResource Accent}" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                            <TextBlock Text="{DynamicResource L_Playlists}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <Button Click="BtnPlaylistsPage_Click" Cursor="Hand" HorizontalAlignment="Left" VerticalAlignment="Center" ToolTip="{DynamicResource L_PlaylistsPageTitle}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <StackPanel x:Name="sp" Orientation="Horizontal" Background="Transparent">
+                                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Accent}" Opacity="0.6" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                        <TextBlock x:Name="lbl" Text="{DynamicResource L_Playlists}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <Path Data="M3,2 L7,6 L3,10" Stroke="{StaticResource T3}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" Width="6" Height="9" Stretch="Uniform" VerticalAlignment="Center" Margin="6,1,0,0"/>
+                                    </StackPanel>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="lbl" Property="Foreground" Value="{DynamicResource Accent}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <!-- Import .m3u (outline) -->
                             <Button x:Name="BtnImportPlaylist" Click="BtnImportPlaylist_Click" Cursor="Hand" Width="26" Height="26" Margin="0,0,6,0" ToolTip="{DynamicResource L_PlaylistImport}" Foreground="{StaticResource T2}">
@@ -637,6 +649,16 @@
                                 </StackPanel>
                             </Button>
 
+                            <!-- "Playlists" tab → opens the inline playlists page (cards grid) -->
+                            <Button x:Name="BtnTabPlaylists" Style="{StaticResource PillButton}" Foreground="{StaticResource T2}" Margin="4,0,0,0" Click="BtnTabPlaylists_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{DynamicResource L_TabPlaylists}" VerticalAlignment="Center"/>
+                                    <Border Background="{StaticResource S2}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="10" MinWidth="24" Height="18" Margin="10,0,0,0">
+                                        <TextBlock x:Name="TxtTabPlaylistsCount" Text="0" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="6,0"/>
+                                    </Border>
+                                </StackPanel>
+                            </Button>
+
                             <!-- Sort control (icon only) -->
                             <Button x:Name="BtnSort" Cursor="Hand" Margin="8,0,0,0" Click="BtnSort_Click" Foreground="{StaticResource T2}" VerticalAlignment="Center" Width="32" Height="32" ToolTip="{DynamicResource L_SortBy}">
                                 <Button.Template>
@@ -705,7 +727,7 @@
                                 </Button.Template>
                                 <Button.Foreground><SolidColorBrush Color="#FF3A3A38"/></Button.Foreground>
                             </Button>
-                            <TextBlock Text="v1.0.0" Foreground="{StaticResource T3}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtVersion" Text="v1.2.0" Foreground="{StaticResource T3}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -1027,6 +1049,9 @@
                     </ListView.ItemTemplate>
                 </ListView>
                 </Grid>
+
+                <!-- ALL PLAYLISTS page (inline — fills the main area, sidebar stays visible) -->
+                <views:PlaylistsPageView x:Name="PlaylistsPageOverlay" Grid.Row="0" Grid.RowSpan="4" Visibility="Collapsed" Panel.ZIndex="40"/>
             </Grid>
         </Grid>
 
@@ -1194,7 +1219,7 @@
                     <!-- CENTER: transport controls -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
                         <Button x:Name="BtnShuffle" Style="{StaticResource CtrlButton}" Click="BtnShuffle_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave" ToolTip="{DynamicResource L_TooltipShuffle}">
-                            <Path Data="{StaticResource ShuffleGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" Fill="Transparent" Width="17" Height="17" Stretch="Uniform"/>
+                            <Path Data="{StaticResource ShuffleGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="17" Height="17" Stretch="Uniform"/>
                         </Button>
                         <Button x:Name="BtnPrev" Style="{StaticResource CtrlButton}" Click="BtnPrev_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave" ToolTip="{DynamicResource L_TooltipPrev}" Margin="10,0">
                             <Path Data="{StaticResource PrevGeo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Width="20" Height="20" Stretch="Uniform"/>
@@ -1207,7 +1232,7 @@
                         </Button>
                         <Button x:Name="BtnRepeat" Style="{StaticResource CtrlButton}" Click="BtnRepeat_Click" MouseEnter="CtrlBtn_MouseEnter" MouseLeave="CtrlBtn_MouseLeave" ToolTip="{DynamicResource L_TooltipRepeat}">
                             <!-- Single geometry, two states via opacity/color only -->
-                            <Path Data="{StaticResource RepeatGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" Fill="Transparent" Width="17" Height="17" Stretch="Uniform"/>
+                            <Path Data="{StaticResource RepeatGeo}" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" Width="17" Height="17" Stretch="Uniform"/>
                         </Button>
                     </StackPanel>
 
@@ -1250,26 +1275,34 @@
                                     <!-- Custom time — compact card with a live value -->
                                     <MenuItem StaysOpenOnClick="True" Focusable="False">
                                         <MenuItem.Header>
-                                            <Border Width="226" Margin="2,2" Padding="11,8" CornerRadius="7"
-                                                    BorderBrush="{StaticResource B1}" BorderThickness="1" Background="#0BC8A96E">
+                                            <Border Width="204" Margin="2,3" CornerRadius="8"
+                                                    BorderBrush="{StaticResource B1}" BorderThickness="1" Background="{StaticResource S2}">
                                                 <StackPanel>
-                                                    <Grid Margin="0,0,0,7">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                            <Path Data="{StaticResource ClockGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.6" Fill="Transparent" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                            <TextBlock Text="{DynamicResource L_SleepCustom}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                        <TextBlock x:Name="TxtSleepCustomLabel" Text="30 min"
-                                                                   Foreground="{DynamicResource Accent}" FontSize="13" FontWeight="Bold"
-                                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                    <!-- Header: icon chip + label, with the live value emphasised on the right.
+                                                         3-column grid keeps long values ("2 ч 59 мин") from overflowing. -->
+                                                    <Grid Margin="12,11,12,9">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="24" Height="24" CornerRadius="7" Background="{StaticResource S3}" Margin="0,0,9,0" VerticalAlignment="Center">
+                                                            <Path Data="{StaticResource ClockGeo}" Stroke="{StaticResource T2}" StrokeThickness="1.5" Fill="Transparent" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1" Text="{DynamicResource L_SleepCustom}" Foreground="{StaticResource T2}" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+                                                        <TextBlock x:Name="TxtSleepCustomLabel" Grid.Column="2" Text="30 мин"
+                                                                   Foreground="{StaticResource T1}" FontSize="16" FontWeight="Bold"
+                                                                   VerticalAlignment="Center"/>
                                                     </Grid>
                                                     <Slider x:Name="SldSleepCustom"
+                                                            Margin="12,0,12,13"
                                                             Style="{StaticResource ThinSlider}"
+                                                            Foreground="{StaticResource T2}"
                                                             Minimum="1" Maximum="180" Value="30"
                                                             IsSnapToTickEnabled="True" TickFrequency="1"
                                                             ValueChanged="SldSleepCustom_ValueChanged"
                                                             Thumb.DragCompleted="SldSleepCustom_DragCompleted"
                                                             PreviewMouseLeftButtonUp="SldSleepCustom_MouseUp"/>
-                                                    <TextBlock Text="{DynamicResource L_SleepCustomHint}" Foreground="{StaticResource T3}" FontSize="9" Margin="0,7,0,0" HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </Border>
                                         </MenuItem.Header>

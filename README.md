@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="Assets/logo.svg" width="96" height="96" alt="SoundCheck logo"/>
+
 # SOUNDCHECK
 
 A music player for Windows - bilingual, single file, no installer.
@@ -16,8 +18,9 @@ A music player for Windows - bilingual, single file, no installer.
 ---
 
 soundcheck is a desktop music player built with WPF on .NET 10. It plays your local
-library, keeps everything in a single SQLite file, and ships as one self-contained
-`.exe`. The interface is in Russian and English and switches at any time.
+files and keeps everything (library, settings, playlists, stats) in one SQLite file.
+There's no installer: it ships as a single self-contained `.exe`. The UI runs in both
+Russian and English, and you can switch languages at any time.
 
 ## Features
 
@@ -25,7 +28,7 @@ library, keeps everything in a single SQLite file, and ships as one self-contain
 - 10-band equalizer with presets and a custom slot
 - Playlists: create / rename / delete, set a cover, reorder by dragging, merge, import/export `.m3u`
 - Tag editing (title / artist / album + cover art), from the library or the file manager
-- File manager with batch rename by tags
+- File manager: rename a single file inline, or batch-rename a whole folder by tags
 - Search, sorting, and drag-and-drop import from Explorer
 - Fullscreen "now playing" with a live spectrum
 - Stats: listening time, play counts, top tracks, history

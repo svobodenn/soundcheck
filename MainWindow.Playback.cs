@@ -61,8 +61,9 @@ public partial class MainWindow
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (_current != t) return; // user already switched again
-                ApplyAccentFromCover(t.CoverBytes);
-                UpdateBlurBg(t.CoverBytes);
+                var cover = CoverBytesFor(t);
+                ApplyAccentFromCover(cover);
+                UpdateBlurBg(cover);
                 ScrollToCurrent();
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
@@ -142,7 +143,17 @@ public partial class MainWindow
 
     /// <summary>Re-resolve and apply the accent for the current track + settings.
     /// Called when accent-related settings change.</summary>
-    private void ApplyAccentNow() => ApplyAccentFromCover(_current?.CoverBytes);
+    private void ApplyAccentNow() => ApplyAccentFromCover(CoverBytesFor(_current));
+
+    /// <summary>Get a track's full cover bytes, fetching from SQLite on demand when
+    /// they're not pinned in RAM. Keeps the library lightweight — covers live in the
+    /// database and are only materialized when needed (accent/blur/now-playing/tags).</summary>
+    private byte[]? CoverBytesFor(Track? t)
+    {
+        if (t == null) return null;
+        if (t.CoverBytes != null) return t.CoverBytes;
+        return t.HasCover ? _storage.GetTrackCover(t.Path) : null;
+    }
 
     private void ApplyAccentFromCover(byte[]? coverBytes)
     {
@@ -486,6 +497,7 @@ public partial class MainWindow
             BtnShuffle.Foreground = (Brush)FindResource("T1");
             BtnShuffle.Opacity = BtnShuffle.IsMouseOver ? 1.0 : 0.65;
         }
+        _tray?.UpdateModes(_shuffle, _repeat == RepeatMode.One);
     }
 
     // Smooth opacity transition on hover (HTML: .cb { transition: color 150ms })
@@ -539,6 +551,7 @@ public partial class MainWindow
             BtnRepeat.Foreground = (Brush)FindResource("T1");
             BtnRepeat.Opacity = BtnRepeat.IsMouseOver ? 1.0 : 0.65;
         }
+        _tray?.UpdateModes(_shuffle, _repeat == RepeatMode.One);
     }
 
     private void UpdatePlayButton()
@@ -554,7 +567,7 @@ public partial class MainWindow
         if (_current != null) _current.IsCurrentPlaying = _audio.IsPlaying;
         // Floating bg fades in only while playing
         // HTML: body.playing::before { opacity: 1 } but body.has-cover::before { opacity: .12 !important }
-        bool hasCover = _current?.CoverBytes != null;
+        bool hasCover = _current?.HasCover == true || _current?.CoverBytes != null;
         FloatBgCanvas.BeginAnimation(OpacityProperty, new DoubleAnimation
         {
             To = _audio.IsPlaying ? (hasCover ? 0.12 : 1.0) : 0.0,
@@ -586,9 +599,10 @@ public partial class MainWindow
             TxtBarTitle.Text = _current.Title;
             TxtBarArtist.Text = string.IsNullOrEmpty(_current.Album)
                 ? _current.Artist : $"{_current.Artist} · {_current.Album}";
-            ImgBarCover.Source = _current.CoverBytes != null
-                ? Library.LoadFullCover(_current.CoverBytes, 200) : null;
-            BarCoverNote.Visibility = _current.CoverBytes != null ? Visibility.Collapsed : Visibility.Visible;
+            var barCover = CoverBytesFor(_current);
+            ImgBarCover.Source = barCover != null
+                ? Library.LoadFullCover(barCover, 200) : null;
+            BarCoverNote.Visibility = barCover != null ? Visibility.Collapsed : Visibility.Visible;
             TxtTimeTot.Text = FmtTime(_current.Duration);
 
             // Art scale entrance (0.84 → 1.03 → 1)
@@ -644,6 +658,11 @@ public partial class MainWindow
             NextTrack();   // PlayTrack crossfades because audio is still playing
             return;
         }
+        // While paused the position can't move on its own — once we've drawn the
+        // current spot, skip the per-tick slider re-animation and label churn.
+        if (!_audio.IsPlaying && Math.Abs(pos - _lastProgressPos) < 0.05) return;
+        _lastProgressPos = pos;
+
         // HTML: .pf { transition: width .25s linear } — smooth fill instead of jumpy 250 ms ticks
         SldProgress.BeginAnimation(System.Windows.Controls.Slider.ValueProperty, new DoubleAnimation
         {

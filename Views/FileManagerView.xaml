@@ -367,27 +367,73 @@
                                                                     <ColumnDefinition Width="*"/>
                                                                     <ColumnDefinition Width="Auto"/>
                                                                     <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
                                                                 </Grid.ColumnDefinitions>
                                                                 <CheckBox Grid.Column="0" Style="{StaticResource FmCheck}" Margin="6,0,12,0"
                                                                           IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
                                                                 <Path Grid.Column="1" Data="{StaticResource FileGeo}" Stroke="{DynamicResource Accent}" StrokeThickness="1.3" Fill="Transparent"
                                                                       Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                                <TextBlock Grid.Column="2" Text="{Binding Display}" VerticalAlignment="Center" FontSize="13"
-                                                                           TextTrimming="CharacterEllipsis">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                                                <!-- Name: static label, or an editable box during inline rename -->
+                                                                <Grid Grid.Column="2">
+                                                                    <TextBlock Text="{Binding Display}" VerticalAlignment="Center" FontSize="13"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               Visibility="{Binding NotEditing, Converter={StaticResource BoolToVis}}">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Foreground" Value="{StaticResource T1}"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Highlight}" Value="True">
+                                                                                        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                    <Border Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
+                                                                            Background="{StaticResource S2}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="6">
+                                                                        <TextBox Text="{Binding EditName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                                 Background="Transparent" BorderThickness="0" Foreground="{StaticResource T1}"
+                                                                                 CaretBrush="{DynamicResource Accent}" FontSize="13" Padding="6,4"
+                                                                                 VerticalContentAlignment="Center"
+                                                                                 IsVisibleChanged="RenameBox_VisibleChanged" KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus"/>
+                                                                    </Border>
+                                                                </Grid>
+                                                                <TextBlock Grid.Column="3" Text="{Binding SizeText}" Foreground="{StaticResource T2}" FontSize="12" VerticalAlignment="Center" Margin="12,0,8,0"/>
+                                                                <!-- Rename file (visible on row hover) -->
+                                                                <Button Grid.Column="4" Click="RenameFile_Click" Cursor="Hand" VerticalAlignment="Center"
+                                                                        ToolTip="{DynamicResource L_FmRenameFile}" Width="26" Height="26" Margin="0,0,2,0">
+                                                                    <Button.Style>
+                                                                        <Style TargetType="Button">
+                                                                            <Setter Property="Opacity" Value="0"/>
+                                                                            <Setter Property="Template">
+                                                                                <Setter.Value>
+                                                                                    <ControlTemplate TargetType="Button">
+                                                                                        <Border x:Name="bd" Background="Transparent" CornerRadius="6">
+                                                                                            <Path Data="M3,5 L9,5 M3,9 L13,9 M3,13 L8,13 M11.5,15.5 L11.5,12.5 L14.5,9.5 L17.5,12.5 L14.5,15.5 Z" Stroke="{StaticResource T2}" StrokeThickness="1.5"
+                                                                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                                                                                  Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                                        </Border>
+                                                                                        <ControlTemplate.Triggers>
+                                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource S3}"/>
+                                                                                            </Trigger>
+                                                                                        </ControlTemplate.Triggers>
+                                                                                    </ControlTemplate>
+                                                                                </Setter.Value>
+                                                                            </Setter>
                                                                             <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding Highlight}" Value="True">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=IsMouseOver}" Value="True">
+                                                                                    <Setter Property="Opacity" Value="1"/>
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                                                    <Setter Property="Opacity" Value="1"/>
                                                                                 </DataTrigger>
                                                                             </Style.Triggers>
                                                                         </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
-                                                                <TextBlock Grid.Column="3" Text="{Binding SizeText}" Foreground="{StaticResource T2}" FontSize="12" VerticalAlignment="Center" Margin="12,0,8,0"/>
+                                                                    </Button.Style>
+                                                                </Button>
                                                                 <!-- Edit tags (visible on row hover) -->
-                                                                <Button Grid.Column="4" Click="EditTags_Click" Cursor="Hand" VerticalAlignment="Center"
+                                                                <Button Grid.Column="5" Click="EditTags_Click" Cursor="Hand" VerticalAlignment="Center"
                                                                         ToolTip="{DynamicResource L_CtxEditTags}" Width="26" Height="26" Margin="0,0,2,0">
                                                                     <Button.Style>
                                                                         <Style TargetType="Button">

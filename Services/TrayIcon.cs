@@ -28,11 +28,21 @@ public sealed class TrayIcon : IDisposable
     public event Action? Prev;
     public event Action? Next;
     public event Action? Quit;
+    public event Action? ShuffleToggle;
+    public event Action? RepeatToggle;
     public event Action<double>? VolumeChanged;
 
     private double _lastVolume = 0.8;
+    private bool _lastShuffle, _lastRepeat;
     /// <summary>Keep the cached volume in sync so the popup opens with the right level.</summary>
     public void UpdateVolume(double v) { _lastVolume = v; _menu?.SetVolume(v); }
+
+    /// <summary>Keep shuffle/repeat state in sync so the popup reflects + can toggle them.</summary>
+    public void UpdateModes(bool shuffle, bool repeat)
+    {
+        _lastShuffle = shuffle; _lastRepeat = repeat;
+        _menu?.SetShuffle(shuffle); _menu?.SetRepeat(repeat);
+    }
 
     public TrayIcon(Window owner)
     {
@@ -79,11 +89,15 @@ public sealed class TrayIcon : IDisposable
         _menu.SetTrack(_lastTitle, _lastArtist, _lastCover);
         _menu.SetPlaying(_lastPlaying);
         _menu.SetVolume(_lastVolume);
+        _menu.SetShuffle(_lastShuffle);
+        _menu.SetRepeat(_lastRepeat);
         _menu.PlayPause += () => PlayPause?.Invoke();
         _menu.Prev      += () => Prev?.Invoke();
         _menu.Next      += () => Next?.Invoke();
         _menu.ShowApp   += () => ShowApp?.Invoke();
         _menu.Quit      += () => Quit?.Invoke();
+        _menu.ShuffleToggle += () => ShuffleToggle?.Invoke();
+        _menu.RepeatToggle  += () => RepeatToggle?.Invoke();
         _menu.VolumeChanged += v => VolumeChanged?.Invoke(v);
 
         var cursor = Control.MousePosition;

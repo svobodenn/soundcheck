@@ -183,8 +183,50 @@ public static class AppSettings
     }
     public static double LastTrackPosition
     {
-        get => double.TryParse(_storage?.GetSetting("play.last_track_pos"), out var v) ? v : 0;
+        get => double.TryParse(_storage?.GetSetting("play.last_track_pos"),
+                   System.Globalization.NumberStyles.Float,
+                   System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
         set { _storage?.SetSetting("play.last_track_pos", value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)); }
+    }
+
+    // ── VISUAL PRESETS ─────────────────────────────────────────────────────
+    // One-click bundles that set several interface toggles together.
+    //   "beauty"      — every effect on (matches post-install defaults).
+    //   "balanced"    — heavy continuous effects off (particles, floating bg),
+    //                    rest on. A sane everyday compromise.
+    //   "performance" — every decorative effect off, ReduceMotion on. Lowest CPU.
+    public static void ApplyVisualPreset(string preset)
+    {
+        void Set(bool particles, bool floatBg, bool logoEq, bool blur, bool reduceMotion)
+        {
+            _storage?.SetSetting("ui.particles",     particles    ? "1" : "0");
+            _storage?.SetSetting("ui.floating_bg",   floatBg      ? "1" : "0");
+            _storage?.SetSetting("ui.logo_eq",       logoEq       ? "1" : "0");
+            _storage?.SetSetting("ui.blur_bg",       blur         ? "1" : "0");
+            _storage?.SetSetting("ui.reduce_motion", reduceMotion ? "1" : "0");
+            Changed?.Invoke(); // one notification — host runs ApplySettings once
+        }
+        switch (preset)
+        {
+            case "performance": Set(false, false, false, false, true);  break;
+            case "balanced":    Set(false, true,  true,  true,  false); break;
+            default:            Set(true,  true,  true,  true,  false); break; // "beauty"
+        }
+    }
+
+    /// <summary>Best-guess match for the current toggle combination, used to
+    /// highlight the active preset chip. Empty string if no preset fits exactly.</summary>
+    public static string CurrentVisualPreset
+    {
+        get
+        {
+            bool p = ParticlesEnabled, f = FloatingBgEnabled, l = LogoEqualizerEnabled,
+                 b = BlurBgEnabled,    r = ReduceMotion;
+            if (!p && !f && !l && !b &&  r) return "performance";
+            if (!p &&  f &&  l &&  b && !r) return "balanced";
+            if ( p &&  f &&  l &&  b && !r) return "beauty";
+            return "";
+        }
     }
 
     // ── RESET ──────────────────────────────────────────────────────────────

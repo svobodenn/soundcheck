@@ -35,6 +35,7 @@ public static class Library
                 Album = tag.Album ?? "",
                 Duration = props?.Duration ?? TimeSpan.Zero,
                 CoverBytes = coverBytes,
+                HasCover = coverBytes != null,
                 Cover = cover,
                 IsExplicit = LooksExplicit(tag.Title) || LooksExplicit(tag.Album),
             };

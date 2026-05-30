@@ -166,8 +166,9 @@ public partial class MainWindow
         // Accent color — re-resolve for the current track (cover vs. fixed manual).
         ApplyAccentNow();
         // Blurred background — re-show for the current cover or fade both layers out.
-        if (AppSettings.BlurBgEnabled && _current?.CoverBytes != null)
-            UpdateBlurBg(_current.CoverBytes);
+        var curCover = CoverBytesFor(_current);
+        if (AppSettings.BlurBgEnabled && curCover != null)
+            UpdateBlurBg(curCover);
         else
             UpdateBlurBg(null); // honors BlurBgEnabled: fades layers out when disabled
         // Autostart with Windows
@@ -231,9 +232,27 @@ public partial class MainWindow
             ok =>
             {
                 if (!ok) return;
+                // Wipe everything in place — no connection close, no restart, no error.
+                // The player just becomes empty (user settings are kept).
                 try { _audio.Stop(); } catch { }
-                try { _storage.CloseAndDelete(); } catch { }
-                RestartApp();
+                _current = null;
+                foreach (var t in _queue) t.IsInQueue = false;
+                _queue.Clear();
+                _allTracks.Clear();
+                _visible.Clear();
+                _navHistory.Clear();
+                _playContext.Clear();
+                _shuffleHistory.Clear();
+                _totalListenedPersisted = 0;
+                _sessionElapsed = TimeSpan.Zero;
+                try { _storage.WipeLibrary(); } catch (Exception ex) { Log.Error("WipeLibrary failed", ex); }
+                ShowAllTracks();      // back to library view + refresh hero/stats
+                RefreshPlaylistsUi();
+                RefreshQueueUi();
+                UpdateStats();
+                UpdateBarMeta();
+                BlurBgImg.Source = null;
+                ToastView.Show(Localization.T("ToastDbDeleted"));
             });
     }
 

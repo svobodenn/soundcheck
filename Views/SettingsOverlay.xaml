@@ -596,6 +596,18 @@
                                     <Button Style="{StaticResource ResetLink}" Content="{DynamicResource L_ResetLink}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BtnResetUi_Click"/>
                                 </Grid>
 
+                                <!-- Performance profile presets — one click flips several toggles below -->
+                                <Border Background="{StaticResource S1}" BorderBrush="{StaticResource B1}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource L_VisualPreset}" Foreground="{StaticResource T1}" FontSize="15" Margin="0,0,0,12"/>
+                                        <StackPanel x:Name="GrpPreset" Orientation="Horizontal">
+                                            <RadioButton x:Name="PresetBeauty"      Tag="beauty"      Style="{StaticResource StepChip}" GroupName="vpreset" Content="{DynamicResource L_PresetBeauty}"/>
+                                            <RadioButton x:Name="PresetBalanced"    Tag="balanced"    Style="{StaticResource StepChip}" GroupName="vpreset" Content="{DynamicResource L_PresetBalanced}"/>
+                                            <RadioButton x:Name="PresetPerformance" Tag="performance" Style="{StaticResource StepChip}" GroupName="vpreset" Content="{DynamicResource L_PresetPerformance}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
                                 <Grid Style="{StaticResource RowGrid}">
                                     <StackPanel HorizontalAlignment="Left">
                                         <TextBlock Text="{DynamicResource L_Particles}" Foreground="{StaticResource T1}" FontSize="15"/>
